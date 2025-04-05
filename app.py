@@ -9,6 +9,7 @@ from flask_migrate import Migrate
 import os
 
 app = Flask(__name__, instance_relative_config=True)
+app.secret_key = 'P@licia1080#'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'dados.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -112,6 +113,7 @@ def gerar_slug(tamanho=8):
 
 # Acessa o link disfarçado
 @app.route("/link/<slug>")
+@login_requerido
 def rastrear_link(slug):
     link = Link.query.filter_by(slug=slug).first()
     if not link:
