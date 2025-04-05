@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Criar Link</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 60px 20px;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+
+        form {
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0 20px 0;
+            border: none;
+            border-radius: 5px;
+            background-color: #f5f6fa;
+            color: #2d3436;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            background-color: #00b894;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #019875;
+        }
+
+        .voltar {
+            display: block;
+            margin-top: 20px;
+            text-align: center;
+            color: #74b9ff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .voltar:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔗 Criar Link Mascarado</h1>
+   <form method="POST">
+        Nome do Investigado: <input type="text" name="nome_investigado" required><br>
+        Destino: <input type="text" name="destino"><br>
+        Slug (opcional): <input type="text" name="slug"><br>
+        <button type="submit">Criar</button>
+    </form>
+
+    <a href="/gerenciar" class="voltar">⬅ Voltar ao Gerenciamento</a>
+</body>
+</html>

