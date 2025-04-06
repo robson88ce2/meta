@@ -128,7 +128,13 @@ def criar_link():
         db.session.add(novo_link)
         db.session.commit()
 
-        link_disfarcado = gerar_link_falso(slug, plataforma)
+        if "127.0.0.1" in request.host_url or "localhost" in request.host_url:
+            # Modo local: usa link funcional direto para teste
+            link_disfarcado = f"{request.host_url}link/{slug}"
+        else:
+            # Modo produção (Render): usa link falso disfarçado
+            link_disfarcado = gerar_link_falso(slug, plataforma)
+
         return render_template("link_gerado.html", link=link_disfarcado)
 
     return render_template("criar_link.html")
