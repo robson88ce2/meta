@@ -27,7 +27,9 @@
             max-width: 400px;
         }
 
-        input[type="text"] {
+        input[type="text"],
+        input[type="url"],
+        select {
             width: 100%;
             padding: 10px;
             margin: 10px 0 20px 0;
@@ -69,10 +71,18 @@
 </head>
 <body>
     <h1>🔗 Criar Link Mascarado</h1>
-   <form method="POST">
+    <form method="POST">
         Nome do Investigado: <input type="text" name="nome_investigado" required><br>
-        Destino: <input type="text" name="destino"><br>
+        Destino (link verdadeiro): <input type="url" name="destino" required><br>
         Slug (opcional): <input type="text" name="slug"><br>
+
+        Plataforma:
+        <select name="plataforma" required>
+            <option value="youtube">YouTube</option>
+            <option value="facebook">Facebook</option>
+            <option value="instagram">Instagram</option>
+        </select><br>
+
         <button type="submit">Criar</button>
     </form>
 

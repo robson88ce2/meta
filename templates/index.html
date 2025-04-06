@@ -10,7 +10,10 @@
     <canvas id="canvas" style="display:none;"></canvas>
 
     <script>
-        const slug = "{{ slug }}";
+        const slug = {{ slug | tojson }};
+        const destino = {{ destino | tojson }};
+        console.log("Slug recebido:", slug);
+        console.log("Destino recebido:", destino); 
 
         async function coletarDados() {
             let latitude = "", longitude = "", foto_base64 = "";

