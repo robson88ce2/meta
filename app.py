@@ -171,21 +171,27 @@ def rastrear_link(slug):
 
     user_agent = request.headers.get("User-Agent", "").lower()
 
-    # Detecta bots de redes sociais
-    redes_sociais = ["facebookexternalhit", "twitterbot", "linkedinbot", "whatsapp", "telegrambot"]
-    if any(bot in user_agent for bot in redes_sociais):
+    # Lista de bots comuns de redes sociais
+    bots = ["facebookexternalhit", "twitterbot", "linkedinbot", "whatsapp", "slackbot", "telegrambot"]
+
+    if any(bot in user_agent for bot in bots):
+        # Se for bot, renderiza preview
         return render_template("preview.html", link=link)
 
-    # Se for humano, segue com a coleta normal
+    # Visitante real → salvar IP e dados
     visitor_ip = request.remote_addr
     timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-    novo = Registro(ip=visitor_ip, user_agent=user_agent, timestamp=timestamp, slug=slug)
+    novo = Registro(
+        ip=visitor_ip,
+        user_agent=request.headers.get("User-Agent"),
+        timestamp=timestamp,
+        slug=slug
+    )
     db.session.add(novo)
     db.session.commit()
 
     return render_template("index.html", slug=slug, destino=link.destino, link=link)
-
 
 # Página inicial
 @app.route("/todos_links")

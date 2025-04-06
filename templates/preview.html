@@ -2,20 +2,17 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>{{ link.og_title or 'Visualização do Link' }}</title>
-
-    <!-- Open Graph (OG) Tags para pré-visualização -->
+    <title>{{ link.og_title }}</title>
     <meta property="og:title" content="{{ link.og_title }}">
     <meta property="og:description" content="{{ link.og_description }}">
     <meta property="og:image" content="{{ link.og_image }}">
     <meta property="og:url" content="{{ request.url }}">
     <meta property="og:type" content="website">
 
-    <!-- Twitter Card -->
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
-    <h2>Pré-visualização gerada com sucesso.</h2>
-    <p>Esse conteúdo é exclusivo para bots de redes sociais.</p>
+    <p>Pré-visualização para redes sociais.</p>
 </body>
 </html>
