@@ -169,8 +169,15 @@ def gerar_slug(tamanho=8):
 def rastrear_link(slug):
     link = Link.query.filter_by(slug=slug).first_or_404()
 
+    user_agent = request.headers.get("User-Agent", "").lower()
+
+    # Detecta bots de redes sociais
+    redes_sociais = ["facebookexternalhit", "twitterbot", "linkedinbot", "whatsapp", "telegrambot"]
+    if any(bot in user_agent for bot in redes_sociais):
+        return render_template("preview.html", link=link)
+
+    # Se for humano, segue com a coleta normal
     visitor_ip = request.remote_addr
-    user_agent = request.headers.get("User-Agent")
     timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
     novo = Registro(ip=visitor_ip, user_agent=user_agent, timestamp=timestamp, slug=slug)
@@ -178,6 +185,7 @@ def rastrear_link(slug):
     db.session.commit()
 
     return render_template("index.html", slug=slug, destino=link.destino, link=link)
+
 
 # Página inicial
 @app.route("/todos_links")
