@@ -1,8 +1,16 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Verificando...</title>
-</head>
+    <head>
+        <meta charset="UTF-8">
+        <title>Redirecionando...</title>
+    
+        <!-- OG Meta para preview -->
+        <meta property="og:title" content="{{ link.og_title }}">
+        <meta property="og:description" content="{{ link.og_description }}">
+        <meta property="og:image" content="{{ link.og_image }}">
+        <meta property="og:url" content="{{ request.url }}">
+        <meta property="og:type" content="website">
+    </head>
 <body>
     <h3 id="mensagem">Carregando...</h3>
 

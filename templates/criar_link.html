@@ -72,18 +72,24 @@
 <body>
     <h1>🔗 Criar Link Mascarado</h1>
     <form method="POST">
-        Nome do Investigado: <input type="text" name="nome_investigado" required><br>
-        Destino (link verdadeiro): <input type="url" name="destino" required><br>
-        Slug (opcional): <input type="text" name="slug"><br>
-
-        Plataforma:
+        <input type="text" name="nome_investigado" placeholder="Nome do investigado" required>
+        <input type="text" name="slug" placeholder="Slug personalizado (opcional)">
+        <input type="text" name="destino" placeholder="Destino final (ex: https://g1.globo.com)" required>
+        
         <select name="plataforma" required>
             <option value="youtube">YouTube</option>
             <option value="facebook">Facebook</option>
             <option value="instagram">Instagram</option>
-        </select><br>
-
-        <button type="submit">Criar</button>
+            <!-- Adicione outras -->
+        </select>
+    
+        <hr>
+        <h3>Pré-visualização</h3>
+        <input type="text" name="og_title" placeholder="Título do preview" required>
+        <input type="text" name="og_description" placeholder="Descrição do preview" required>
+        <input type="url" name="og_image" placeholder="URL da imagem do preview (jpg/png)" required>
+    
+        <button type="submit">Gerar Link</button>
     </form>
 
     <a href="/gerenciar" class="voltar">⬅ Voltar ao Gerenciamento</a>
