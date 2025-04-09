@@ -44,6 +44,12 @@ app = Flask(__name__, instance_relative_config=True)
 app.secret_key = 'P@licia1080#'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'dados.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# 🔧 Garante que a pasta existe (essencial no Render)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 
 os.makedirs(app.instance_path, exist_ok=True)
 
@@ -77,6 +83,15 @@ def upload_imagem():
     
     return jsonify({"erro": "Formato de imagem não permitido"}), 400
 
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5 MB
+
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+# Cria a pasta, se não existir (isso resolve o erro no Render)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 @app.route("/", methods=["GET", "POST"])
