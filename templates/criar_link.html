@@ -71,7 +71,7 @@
 </head>
 <body>
     <h1>🔗 Criar Link Mascarado</h1>
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data" id="form-link">
         <input type="text" name="nome_investigado" placeholder="Nome do investigado" required>
         <input type="text" name="slug" placeholder="Slug personalizado (opcional)">
         <input type="text" name="destino" placeholder="Destino final (ex: https://g1.globo.com)" required>
@@ -87,11 +87,50 @@
         <h3>Pré-visualização</h3>
         <input type="text" name="og_title" placeholder="Título do preview" required>
         <input type="text" name="og_description" placeholder="Descrição do preview" required>
-        <input type="url" name="og_image" placeholder="URL da imagem do preview (jpg/png)" required>
+        
+        <!-- Upload de imagem -->
+        <input type="file" id="imagem" accept="image/*">
+        <input type="text" name="og_image" id="og_image" placeholder="URL da imagem do preview" readonly required>
     
         <button type="submit">Gerar Link</button>
     </form>
+    <p id="status_upload" style="color: #74b9ff; margin-top: 10px;"></p>
+    
 
     <a href="/gerenciar" class="voltar">⬅ Voltar ao Gerenciamento</a>
+    <script>
+        document.getElementById('imagem').addEventListener('change', async function () {
+            const fileInput = this;
+            const status = document.getElementById('status_upload');
+            const inputOgImage = document.getElementById('og_image');
+        
+            if (fileInput.files.length === 0) return;
+        
+            const formData = new FormData();
+            formData.append("imagem", fileInput.files[0]);
+        
+            status.innerText = "Enviando imagem...";
+        
+            try {
+                const res = await fetch("/upload_imagem", {
+                    method: "POST",
+                    body: formData
+                });
+        
+                const data = await res.json();
+                if (data.url) {
+                    inputOgImage.value = data.url;
+                    status.innerText = "Imagem enviada com sucesso!";
+                } else {
+                    status.innerText = data.erro || "Erro ao enviar imagem.";
+                }
+            } catch (err) {
+                status.innerText = "Erro na conexão com o servidor.";
+            }
+        });
+        </script>
+        
+
 </body>
+
 </html>

@@ -8,6 +8,7 @@ from functools import wraps
 from flask_migrate import Migrate
 import os
 import re
+from werkzeug.utils import secure_filename
 
 DOMINIOS_FALSOS = {
     "youtube": ["youtube.c0m.lat", "y0utube.com.br", "you-tube.video"],
@@ -47,6 +48,36 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 os.makedirs(app.instance_path, exist_ok=True)
 
 db = SQLAlchemy(app)
+
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def imagem_permitida(nome_arquivo):
+    return '.' in nome_arquivo and nome_arquivo.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route("/upload_imagem", methods=["POST"])
+def upload_imagem():
+    if 'imagem' not in request.files:
+        return jsonify({"erro": "Nenhuma imagem enviada"}), 400
+    
+    imagem = request.files['imagem']
+    
+    if imagem.filename == '':
+        return jsonify({"erro": "Nome de arquivo inválido"}), 400
+    
+    if imagem and imagem_permitida(imagem.filename):
+        filename = secure_filename(imagem.filename)
+        caminho = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        imagem.save(caminho)
+
+        # Gera URL pública
+        url_imagem = url_for('static', filename=f'uploads/{filename}', _external=True)
+        return jsonify({"url": url_imagem})
+    
+    return jsonify({"erro": "Formato de imagem não permitido"}), 400
+
+
 
 @app.route("/", methods=["GET", "POST"])
 def login():
