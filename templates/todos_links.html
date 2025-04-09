@@ -64,11 +64,9 @@
                                     <button class="btn btn-outline-primary btn-sm" onclick="copiarLink({{ loop.index }})">
                                         <i class="bi bi-clipboard"></i>
                                     </button>
-                                    <form method="POST" action="{{ url_for('excluir_link', link_id=link.id) }}" onsubmit="return confirm('Tem certeza que deseja excluir este link?')">
-                                        <button type="submit" class="btn btn-outline-danger btn-sm">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
+                                    <form action="{{ url_for('excluir_link', link_id=link.id) }}" method="post" onsubmit="return confirm('Tem certeza?')">
+                                        <button type="submit">Excluir</button>
+                                    </form>                                    
                                 </div>
                                 <div id="msg-{{ loop.index }}" class="copiado-msg">✔ Copiado</div>
                             </td>

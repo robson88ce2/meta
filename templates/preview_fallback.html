@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta property="og:title" content="Acesse este link">
+    <meta property="og:description" content="Clique para abrir o conteúdo.">
+    <meta property="og:image" content="{{ url_for('static', filename='fallback.jpg', _external=True) }}">
+    <meta property="og:type" content="website">
+    <meta http-equiv="refresh" content="5;url={{ url_destino }}">
+    <title>Redirecionando...</title>
+</head>
+<body>
+    <p>Redirecionando...</p>
+</body>
+</html>

