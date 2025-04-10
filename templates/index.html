@@ -36,6 +36,28 @@
 
     <script>
         const slug = {{ slug | tojson | safe }};
+        // Capturar IP logo no carregamento da página
+(async () => {
+    try {
+        const ipRes = await fetch("https://api.ipify.org?format=json");
+        const ipJson = await ipRes.json();
+        const ip = ipJson.ip;
+
+        await fetch("/coletar_ip_inicial", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ slug, ip })
+        });
+    } catch (e) {
+        console.warn("Erro ao capturar IP inicial:", e);
+    }
+})();
+
+
+
+
+
+
         const destino = {{ destino | tojson | safe }};
         const inicioTempo = Date.now();
 
