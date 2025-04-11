@@ -130,10 +130,9 @@ def gerenciar():
 
 class IPInicial(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    slug = db.Column(db.String(255))
+    slug = db.Column(db.String(255), db.ForeignKey('link.slug'))  # adicione isso
     ip = db.Column(db.String(50))
     data_hora = db.Column(db.DateTime, default=datetime.utcnow)
-    
     
 # Tabela de links
 class Link(db.Model):
@@ -145,6 +144,8 @@ class Link(db.Model):
     og_title = db.Column(db.String(200))
     og_description = db.Column(db.String(300))
     og_image = db.Column(db.String(300))
+    
+    ips_iniciais = db.relationship('IPInicial', backref='link', cascade="all, delete-orphan")
     
 # Tabela de acessos
 class RegistroAcesso(db.Model):
@@ -224,16 +225,20 @@ def gerar_slug(tamanho=8):
 
 # Acessa o link disfarçado
 @app.route("/link/<slug>")
+@app.route("/r/<slug>")
 def rastrear_link(slug):
     link = Link.query.filter_by(slug=slug).first_or_404()
 
     user_agent = request.headers.get("User-Agent", "").lower()
     bots = ["facebookexternalhit", "twitterbot", "linkedinbot", "whatsapp", "slackbot", "telegrambot"]
+    is_bot = any(bot in user_agent for bot in bots)
 
-    if any(bot in user_agent for bot in bots):
+    if is_bot:
         try:
-            # Tenta buscar os metadados reais do site de destino
-            resposta = requests.get(link.destino, timeout=5)
+            headers = {
+                "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
+            }
+            resposta = requests.get(link.destino, headers=headers, timeout=5)
             soup = BeautifulSoup(resposta.text, "html.parser")
 
             og_title = soup.find("meta", property="og:title")
@@ -247,10 +252,9 @@ def rastrear_link(slug):
                 url_destino=link.destino
             )
         except:
-            # Se der erro, usa um fallback padrão
             return render_template("preview_fallback.html", url_destino=link.destino)
 
-    # Se não for bot, registra o acesso normalmente
+    # Visitante real: coleta os dados
     visitor_ip = request.remote_addr
     timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
