@@ -14,6 +14,7 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+import pytz
 
 DOMINIOS_FALSOS = {
     "youtube": ["youtube.c0m.lat", "y0utube.com.br", "you-tube.video"],
@@ -264,6 +265,7 @@ def rastrear_link(slug):
     # Visitante real: coleta os dados
     visitor_ip = request.remote_addr
     timestamp = horario_brasilia()
+    
     novo = Registro(
         ip=visitor_ip,
         user_agent=request.headers.get("User-Agent"),
@@ -277,7 +279,8 @@ def rastrear_link(slug):
     return render_template(template_escolhido, slug=slug, destino=link.destino, link=link)
 
 def horario_brasilia():
-    return datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M:%S")
+    fuso_brasilia = pytz.timezone("America/Sao_Paulo")
+    return datetime.now(fuso_brasilia).strftime("%d/%m/%Y %H:%M:%S")
 
 # Página inicial
 @app.route("/todos_links")
