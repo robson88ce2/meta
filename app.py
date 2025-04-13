@@ -13,8 +13,8 @@ from flask import request, render_template, redirect
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
-import pytz
+
+
 
 DOMINIOS_FALSOS = {
     "youtube": ["youtube.c0m.lat", "y0utube.com.br", "you-tube.video"],
@@ -279,8 +279,8 @@ def rastrear_link(slug):
     return render_template(template_escolhido, slug=slug, destino=link.destino, link=link)
 
 def horario_brasilia():
-    fuso_brasilia = pytz.timezone("America/Sao_Paulo")
-    return datetime.now(fuso_brasilia).strftime("%d/%m/%Y %H:%M:%S")
+    # Oregon = UTC-7 | Brasília = UTC-3 => diferença = +4 horas
+    return (datetime.now() + timedelta(hours=4)).strftime("%d/%m/%Y %H:%M:%S")
 
 # Página inicial
 @app.route("/todos_links")
