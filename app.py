@@ -13,6 +13,8 @@ from flask import request, render_template, redirect
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
 DOMINIOS_FALSOS = {
     "youtube": ["youtube.c0m.lat", "y0utube.com.br", "you-tube.video"],
     "facebook": ["faceb00k.page", "facebooke.live", "f4cebook.com"],
@@ -261,8 +263,7 @@ def rastrear_link(slug):
 
     # Visitante real: coleta os dados
     visitor_ip = request.remote_addr
-    horario_brasilia = datetime.utcnow() - timedelta(hours=3)
-    timestamp = horario_brasilia.strftime("%d/%m/%Y %H:%M:%S")
+    timestamp = horario_brasilia()
     novo = Registro(
         ip=visitor_ip,
         user_agent=request.headers.get("User-Agent"),
@@ -274,6 +275,9 @@ def rastrear_link(slug):
 
     template_escolhido = f"{link.plataforma.lower()}.html"
     return render_template(template_escolhido, slug=slug, destino=link.destino, link=link)
+
+def horario_brasilia():
+    return datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M:%S")
 
 # Página inicial
 @app.route("/todos_links")
