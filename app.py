@@ -1,7 +1,6 @@
 
 from flask import Flask, request, render_template, jsonify, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
 import random
 import string
 from flask import Flask, request, render_template, jsonify, redirect, url_for, session
@@ -13,7 +12,7 @@ from werkzeug.utils import secure_filename
 from flask import request, render_template, redirect
 import requests
 from bs4 import BeautifulSoup
-
+from datetime import datetime, timedelta
 DOMINIOS_FALSOS = {
     "youtube": ["youtube.c0m.lat", "y0utube.com.br", "you-tube.video"],
     "facebook": ["faceb00k.page", "facebooke.live", "f4cebook.com"],
@@ -262,8 +261,8 @@ def rastrear_link(slug):
 
     # Visitante real: coleta os dados
     visitor_ip = request.remote_addr
-    timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-
+    horario_brasilia = datetime.utcnow() - timedelta(hours=3)
+    timestamp = horario_brasilia.strftime("%d/%m/%Y %H:%M:%S")
     novo = Registro(
         ip=visitor_ip,
         user_agent=request.headers.get("User-Agent"),
