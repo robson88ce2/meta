@@ -77,12 +77,16 @@
         <input type="text" name="slug" placeholder="Slug personalizado (opcional)">
         <input type="text" name="destino" placeholder="Destino final (ex: https://g1.globo.com)" required>
         
-        <select name="plataforma" required>
-            <option value="youtube">YouTube</option>
-            <option value="facebook">Facebook</option>
-            <option value="instagram">Instagram</option>
-            <!-- Adicione outras -->
-        </select>
+        <label for="plataforma">Plataforma Visual:</label>
+            <select name="plataforma" id="plataforma">
+                <option value="youtube">YouTube</option>
+                <option value="instagram">Instagram</option>
+                <option value="facebook">Facebook</option>
+                <option value="kwai">Kwai</option>
+                <option value="tiktok">TikTok</option>
+                <option value="noticia">portal de noticias </option>
+            </select>
+
     
         <hr>
         <h3>Pré-visualização</h3>

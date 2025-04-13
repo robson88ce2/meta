@@ -38,10 +38,16 @@ CAMINHOS_FALSOS = {
     "maps": ["/place/{slug}", "/dir/?api=1&destination={slug}"]
 }
 
-def gerar_link_falso(slug, plataforma="youtube"):
-    dominio = random.choice(DOMINIOS_FALSOS.get(plataforma, DOMINIOS_FALSOS["youtube"]))
-    caminho = random.choice(CAMINHOS_FALSOS.get(plataforma, [f"/{slug}"]))
-    return f"https://{dominio}{caminho}"
+def gerar_link_falso(slug, plataforma):
+    dominios = {
+        "youtube": f"https://youtube.c0m.lat/live/{slug}",
+        "instagram": f"https://instagram.com-watch.com.reels/{slug}",
+        "facebook": f"https://fb.watch.com.page.live/{slug}",
+        "kwai": f"https://kwai-app.page.video/{slug}",
+        "tiktok": f"https://tiktok.c0m-lat.video/{slug}",
+    }
+    return dominios.get(plataforma, f"/link/{slug}")
+
 
 
 app = Flask(__name__, instance_relative_config=True)
@@ -267,7 +273,8 @@ def rastrear_link(slug):
     db.session.add(novo)
     db.session.commit()
 
-    return render_template("index.html", slug=slug, destino=link.destino, link=link)
+    template_escolhido = f"{link.plataforma.lower()}.html"
+    return render_template(template_escolhido, slug=slug, destino=link.destino, link=link)
 
 # Página inicial
 @app.route("/todos_links")
