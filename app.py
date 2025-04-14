@@ -15,43 +15,6 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
 
-
-DOMINIOS_FALSOS = {
-    "youtube": ["youtube.c0m.lat", "y0utube.com.br", "you-tube.video"],
-    "facebook": ["faceb00k.page", "facebooke.live", "f4cebook.com"],
-    "instagram": ["1nstagram.store", "insta-gram.pics"],
-    "tiktok": ["t1kt0k.video", "tik-tok.click"],
-    "kwai": ["kwaii.link", "kwai-br.fun"],
-    "whatsapp": ["whatszap.click", "wpp.me-confirma.live"],
-    "mercado_pago": ["mpago.site", "mercado-br.online"],
-    "nubank": ["nub4nk.app", "nubanq.link"],
-    "maps": ["maps-google.place", "g0oglemaps.live"]
-}
-
-CAMINHOS_FALSOS = {
-    "youtube": ["/watch?v={slug}", "/live/{slug}"],
-    "facebook": ["/profile.php?id={slug}", "/story.php?story_fbid={slug}"],
-    "instagram": ["/p/{slug}", "/reel/{slug}"],
-    "tiktok": ["/@user/video/{slug}", "/v/{slug}"],
-    "kwai": ["/video/{slug}", "/share/{slug}"],
-    "whatsapp": ["/chat/{slug}", "/group/join/{slug}"],
-    "mercado_pago": ["/cobranca/{slug}", "/pagamento/{slug}"],
-    "nubank": ["/boleto/{slug}", "/pix/{slug}"],
-    "maps": ["/place/{slug}", "/dir/?api=1&destination={slug}"]
-}
-
-def gerar_link_falso(slug, plataforma):
-    dominios = {
-        "youtube": f"https://youtube.c0m.lat/live/{slug}",
-        "instagram": f"https://instagram.com-watch.com.reels/{slug}",
-        "facebook": f"https://fb.watch.com.page.live/{slug}",
-        "kwai": f"https://kwai-app.page.video/{slug}",
-        "tiktok": f"https://tiktok.c0m-lat.video/{slug}",
-    }
-    return dominios.get(plataforma, f"/link/{slug}")
-
-
-
 app = Flask(__name__, instance_relative_config=True)
 app.secret_key = 'P@licia1080#'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'dados.db')
@@ -217,10 +180,7 @@ def criar_link():
         db.session.add(novo_link)
         db.session.commit()
 
-        if "127.0.0.1" in request.host_url or "localhost" in request.host_url:
-            link_disfarcado = f"{request.host_url}link/{slug}"
-        else:
-            link_disfarcado = gerar_link_falso(slug, plataforma)
+        link_disfarcado = f"{request.host_url}link/{slug}"
 
         return render_template("link_gerado.html", link=link_disfarcado)
 
