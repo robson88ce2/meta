@@ -1,3 +1,4 @@
+import uuid
 from flask import Flask, request, render_template, jsonify, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 import random
@@ -155,6 +156,12 @@ with app.app_context():
     db.create_all()
 
 # Página de criação de links
+UPLOAD_FOLDER = os.path.join('static', 'previews')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 @app.route("/criar_link", methods=["GET", "POST"])
 @login_requerido
 def criar_link():
@@ -164,28 +171,29 @@ def criar_link():
         nome_investigado = request.form.get('nome_investigado')
         plataforma = request.form.get('plataforma')
         
-        # Campos da pré-visualização alternativa (simulada)
+        # Campos da pré-visualização
         preview_titulo = request.form.get('preview_titulo')
         preview_descricao = request.form.get('preview_descricao')
         preview_imagem = None
-        preview_tipo = request.form.get('preview_tipo')  # opcional, mas útil
+        preview_tipo = request.form.get('preview_tipo')  # opcional
 
-        # Verifique se o arquivo foi enviado
+        # Verifique se foi enviado um arquivo de imagem
         if 'imagem' in request.files:
             imagem = request.files['imagem']
             if imagem and allowed_file(imagem.filename):
                 filename = secure_filename(imagem.filename)
-                imagem.save(os.path.join(UPLOAD_FOLDER, filename))
-                preview_imagem = os.path.join(UPLOAD_FOLDER, filename)
+                caminho = os.path.join(UPLOAD_FOLDER, filename)
+                imagem.save(caminho)
+                preview_imagem = filename  # Só o nome do arquivo, para usar depois com url_for
 
-        # Se não veio nenhum destino, aborta
+        # Validação
         if not destino:
             flash("Destino é obrigatório!", "error")
             return redirect('/criar_link')
 
-        # Se slug não veio, pode gerar um automático ou usar algum fallback
+        # Se slug não veio, gera automático
         if not slug:
-            slug = str(uuid4())[:8]
+            slug = str(uuid.uuid4())[:8]
 
         novo_link = Link(
             slug=slug,
