@@ -247,7 +247,7 @@ def rastrear_link(slug):
             return render_template("preview_real.html",
                 titulo=link.og_title or "Acesse este link",
                 descricao=link.og_description or "Clique para visualizar o conteúdo.",
-                imagem=link.og_image or url_for('static', filename='fallback.jpg', _external=True),
+                imagem=link.og_image or url_for('static', filename=f'previews/{link.preview_imagem}', _external=True),
                 url_destino=link.destino,
                 tipo="website",
                 url_real=link.destino
