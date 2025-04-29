@@ -269,7 +269,7 @@ def rastrear_link(slug):
                 return render_template("preview_real.html",
                     titulo=og_title["content"] if og_title else "Acesse este link",
                     descricao=og_desc["content"] if og_desc else "Clique para visualizar o conteúdo.",
-                    imagem=og_image["content"] if og_image else url_for('static', filename='fallback.jpg', _external=True),
+                    imagem=og_image["content"] if og_image else url_for('static', filename=f'previews/{link.preview_imagem}', _external=True),
                     url_destino=link.destino,
                     tipo=og_type["content"] if og_type else "website",
                     url_real=og_url["content"] if og_url else link.destino
