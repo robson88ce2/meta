@@ -26,7 +26,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # 📁 Configurações de upload
-UPLOAD_FOLDER = 'static/previews'   # Agora centralizado
+UPLOAD_FOLDER = 'static/previews'  # Agora centralizado
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # Limite de 5MB
@@ -43,7 +43,6 @@ def extensao_permitida(nome_arquivo):
     return '.' in nome_arquivo and nome_arquivo.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # 📤 Rota para upload de imagem
-
 @app.route("/upload_imagem", methods=["POST"])
 def upload_imagem():
     if "imagem" not in request.files:
@@ -54,7 +53,7 @@ def upload_imagem():
     if arquivo.filename == "":
         return jsonify({"erro": "Nome de arquivo vazio"}), 400
 
-    if arquivo and permitido(arquivo.filename):  # Certifique-se de que a função `permitido` está definida
+    if arquivo and extensao_permitida(arquivo.filename):
         filename = secure_filename(arquivo.filename)
         caminho = os.path.join(app.config["UPLOAD_FOLDER"], filename)
 
@@ -78,6 +77,7 @@ def upload_imagem():
             return jsonify({"erro": f"Erro ao processar imagem: {e}"}), 500
     else:
         return jsonify({"erro": "Extensão de arquivo não permitida."}), 400
+
     
 @app.route("/", methods=["GET", "POST"])
 def login():
