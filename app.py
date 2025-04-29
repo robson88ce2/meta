@@ -1,5 +1,4 @@
-
-from flask import Flask, request, render_template, jsonify, redirect, url_for
+from flask import Flask, request, render_template, jsonify, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 import random
 import string
@@ -13,7 +12,7 @@ from flask import request, render_template, redirect
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
-
+from uuid import uuid4
 
 app = Flask(__name__, instance_relative_config=True)
 app.secret_key = 'P@licia1080#'
@@ -24,7 +23,6 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # 🔧 Garante que a pasta existe (essencial no Render)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
 
 os.makedirs(app.instance_path, exist_ok=True)
 
@@ -115,6 +113,10 @@ class Link(db.Model):
     og_title = db.Column(db.String(200))
     og_description = db.Column(db.String(300))
     og_image = db.Column(db.String(300))
+    preview_titulo = db.Column(db.String(255))
+    preview_descricao = db.Column(db.String(500))
+    preview_imagem = db.Column(db.String(255)) # Nome da imagem salva
+    preview_tipo = db.Column(db.String(50))
     
     ips_iniciais = db.relationship('IPInicial', backref='link', cascade="all, delete-orphan")
     
@@ -157,35 +159,56 @@ with app.app_context():
 @login_requerido
 def criar_link():
     if request.method == "POST":
-        nome_investigado = request.form["nome_investigado"]
-        destino = request.form["destino"]
-        slug = request.form["slug"] or gerar_slug()
-        plataforma = request.form["plataforma"]
-        og_title = request.form["og_title"]
-        og_description = request.form["og_description"]
-        og_image = request.form["og_image"]
+        slug = request.form.get('slug')
+        destino = request.form.get('destino')
+        nome_investigado = request.form.get('nome_investigado')
+        plataforma = request.form.get('plataforma')
+        
+        # Campos da pré-visualização alternativa (simulada)
+        preview_titulo = request.form.get('preview_titulo')
+        preview_descricao = request.form.get('preview_descricao')
+        preview_imagem = None
+        preview_tipo = request.form.get('preview_tipo')  # opcional, mas útil
 
-        if Link.query.filter_by(slug=slug).first():
-            return "Slug já existe! Escolha outro.", 400
+        # Verifique se o arquivo foi enviado
+        if 'imagem' in request.files:
+            imagem = request.files['imagem']
+            if imagem and allowed_file(imagem.filename):
+                filename = secure_filename(imagem.filename)
+                imagem.save(os.path.join(UPLOAD_FOLDER, filename))
+                preview_imagem = os.path.join(UPLOAD_FOLDER, filename)
+
+        # Se não veio nenhum destino, aborta
+        if not destino:
+            flash("Destino é obrigatório!", "error")
+            return redirect('/criar_link')
+
+        # Se slug não veio, pode gerar um automático ou usar algum fallback
+        if not slug:
+            slug = str(uuid4())[:8]
 
         novo_link = Link(
             slug=slug,
             destino=destino,
             nome_investigado=nome_investigado,
             plataforma=plataforma,
-            og_title=og_title,
-            og_description=og_description,
-            og_image=og_image
+            preview_titulo=preview_titulo,
+            preview_descricao=preview_descricao,
+            preview_imagem=preview_imagem,
+            preview_tipo=preview_tipo
         )
-        db.session.add(novo_link)
-        db.session.commit()
 
-        link_disfarcado = f"{request.host_url}link/{slug}"
+        try:
+            db.session.add(novo_link)
+            db.session.commit()
+            flash("Link criado com sucesso!", "success")
+            return redirect('/todos_links')
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Erro ao criar link: {e}", "error")
+            return redirect('/criar_link')
 
-        return render_template("link_gerado.html", link=link_disfarcado)
-
-    return render_template("criar_link.html")
-
+    return render_template('criar_link.html')
 
 # Gera slugs aleatórios
 def gerar_slug(tamanho=8):
@@ -197,34 +220,63 @@ def gerar_slug(tamanho=8):
 def rastrear_link(slug):
     link = Link.query.filter_by(slug=slug).first_or_404()
 
+    # Se já tiver um preview manual inserido
+    if link.preview_titulo and link.preview_imagem:
+        return render_template("preview_real.html",
+            titulo=link.preview_titulo,
+            descricao=link.preview_descricao or "Clique para visualizar o conteúdo.",
+            imagem=url_for('static', filename=f'previews/{link.preview_imagem}', _external=True),
+            url_destino=link.destino,
+            tipo=link.preview_tipo or "website",
+            url_real=link.destino
+        )
+
+    # Se não tiver, tenta buscar Open Graph
     user_agent = request.headers.get("User-Agent", "").lower()
     bots = ["facebookexternalhit", "twitterbot", "linkedinbot", "whatsapp", "slackbot", "telegrambot"]
     is_bot = any(bot in user_agent for bot in bots)
 
     if is_bot:
-        try:
-            headers = {
-                "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
-            }
-            resposta = requests.get(link.destino, headers=headers, timeout=5)
-            soup = BeautifulSoup(resposta.text, "html.parser")
-
-            og_title = soup.find("meta", property="og:title")
-            og_desc = soup.find("meta", property="og:description")
-            og_image = soup.find("meta", property="og:image")
-            og_type = soup.find("meta", property="og:type")
-            og_url = soup.find("meta", property="og:url")
-
+        if link.og_title or link.og_image:
+            # Já tem OG salvo no banco
             return render_template("preview_real.html",
-                titulo=og_title["content"] if og_title else "Acesse este link",
-                descricao=og_desc["content"] if og_desc else "Clique para visualizar o conteúdo.",
-                imagem=og_image["content"] if og_image else url_for('static', filename='fallback.jpg', _external=True),
+                titulo=link.og_title or "Acesse este link",
+                descricao=link.og_description or "Clique para visualizar o conteúdo.",
+                imagem=link.og_image or url_for('static', filename='fallback.jpg', _external=True),
                 url_destino=link.destino,
-                tipo=og_type["content"] if og_type else "website",
-                url_real=og_url["content"] if og_url else link.destino
+                tipo="website",
+                url_real=link.destino
             )
-        except:
-            return render_template("preview_fallback.html", url_destino=link.destino)
+        else:
+            # Tenta buscar ao vivo
+            try:
+                headers = {
+                    "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
+                }
+                resposta = requests.get(link.destino, headers=headers, timeout=5)
+                soup = BeautifulSoup(resposta.text, "html.parser")
+
+                og_title = soup.find("meta", property="og:title")
+                og_desc = soup.find("meta", property="og:description")
+                og_image = soup.find("meta", property="og:image")
+                og_type = soup.find("meta", property="og:type")
+                og_url = soup.find("meta", property="og:url")
+
+                return render_template("preview_real.html",
+                    titulo=og_title["content"] if og_title else "Acesse este link",
+                    descricao=og_desc["content"] if og_desc else "Clique para visualizar o conteúdo.",
+                    imagem=og_image["content"] if og_image else url_for('static', filename='fallback.jpg', _external=True),
+                    url_destino=link.destino,
+                    tipo=og_type["content"] if og_type else "website",
+                    url_real=og_url["content"] if og_url else link.destino
+                )
+            except:
+                return render_template("preview_fallback.html", url_destino=link.destino)
+
+    # Se não for bot, redireciona direto
+    return redirect(link.destino)
+
+
 
     # Visitante real: coleta os dados
     visitor_ip = request.remote_addr
