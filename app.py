@@ -44,7 +44,7 @@ def extensao_permitida(nome_arquivo):
 
 # 📤 Rota para upload de imagem
 
-@app.route("/upload", methods=["POST"])
+@app.route("/upload_imagem", methods=["POST"])
 def upload_imagem():
     if "imagem" not in request.files:
         return "Nenhum arquivo enviado.", 400
