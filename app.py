@@ -14,60 +14,68 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from uuid import uuid4
+from PIL import Image
 
+
+# 🔥 Inicializa o Flask
 app = Flask(__name__, instance_relative_config=True)
 app.secret_key = 'P@licia1080#'
+
+# 📦 Configurações do banco de dados
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'dados.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-UPLOAD_FOLDER = 'static/uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# 🔧 Garante que a pasta existe (essencial no Render)
+# 📁 Configurações de upload
+UPLOAD_FOLDER = 'static/previews'   # Agora centralizado
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # Limite de 5MB
+
+# 📂 Garante que as pastas necessárias existem
+os.makedirs(app.instance_path, exist_ok=True)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-os.makedirs(app.instance_path, exist_ok=True)
-
+# 📚 Inicializa o banco
 db = SQLAlchemy(app)
 
-UPLOAD_FOLDER = 'static/uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-
-def imagem_permitida(nome_arquivo):
+# 🛡️ Função para checar extensão permitida
+def extensao_permitida(nome_arquivo):
     return '.' in nome_arquivo and nome_arquivo.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@app.route("/upload_imagem", methods=["POST"])
+# 📤 Rota para upload de imagem
+
+@app.route("/upload", methods=["POST"])
 def upload_imagem():
-    if 'imagem' not in request.files:
-        return jsonify({"erro": "Nenhuma imagem enviada"}), 400
+    if "imagem" not in request.files:
+        return "Nenhum arquivo enviado.", 400
+
+    arquivo = request.files["imagem"]
+
+    if arquivo.filename == "":
+        return "Nome de arquivo vazio.", 400
+
+    if arquivo and permitido(arquivo.filename):
+        filename = secure_filename(arquivo.filename)
+        caminho = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+
+        try:
+            # Abre e valida imagem
+            img = Image.open(arquivo)
+            img = img.convert("RGB")  # Garante que seja RGB
+
+            # Redimensiona para 1200x630 (padrão social media)
+            img = img.resize((1200, 630))
+
+            # Salva como JPEG
+            caminho_jpg = os.path.splitext(caminho)[0] + ".jpg"
+            img.save(caminho_jpg, "JPEG", quality=85)
+
+            return f"Imagem salva em {caminho_jpg}!", 200
+        except Exception as e:
+            return f"Erro ao processar imagem: {e}", 500
+    else:
+        return "Extensão de arquivo não permitida.", 400
     
-    imagem = request.files['imagem']
-    
-    if imagem.filename == '':
-        return jsonify({"erro": "Nome de arquivo inválido"}), 400
-    
-    if imagem and imagem_permitida(imagem.filename):
-        filename = secure_filename(imagem.filename)
-        caminho = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        imagem.save(caminho)
-
-        # Gera URL pública
-        url_imagem = url_for('static', filename=f'uploads/{filename}', _external=True)
-        return jsonify({"url": url_imagem})
-    
-    return jsonify({"erro": "Formato de imagem não permitido"}), 400
-
-app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5 MB
-
-UPLOAD_FOLDER = 'static/uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-
-# Cria a pasta, se não existir (isso resolve o erro no Render)
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
