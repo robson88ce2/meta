@@ -47,14 +47,14 @@ def extensao_permitida(nome_arquivo):
 @app.route("/upload_imagem", methods=["POST"])
 def upload_imagem():
     if "imagem" not in request.files:
-        return "Nenhum arquivo enviado.", 400
+        return jsonify({"erro": "Nenhuma imagem enviada"}), 400
 
     arquivo = request.files["imagem"]
 
     if arquivo.filename == "":
-        return "Nome de arquivo vazio.", 400
+        return jsonify({"erro": "Nome de arquivo vazio"}), 400
 
-    if arquivo and permitido(arquivo.filename):
+    if arquivo and permitido(arquivo.filename):  # Certifique-se de que a função `permitido` está definida
         filename = secure_filename(arquivo.filename)
         caminho = os.path.join(app.config["UPLOAD_FOLDER"], filename)
 
@@ -70,11 +70,14 @@ def upload_imagem():
             caminho_jpg = os.path.splitext(caminho)[0] + ".jpg"
             img.save(caminho_jpg, "JPEG", quality=85)
 
-            return f"Imagem salva em {caminho_jpg}!", 200
+            # Retorna a URL pública da imagem
+            url_imagem = url_for('static', filename=f'previews/{filename}', _external=True)
+            return jsonify({"url": url_imagem}), 200
+
         except Exception as e:
-            return f"Erro ao processar imagem: {e}", 500
+            return jsonify({"erro": f"Erro ao processar imagem: {e}"}), 500
     else:
-        return "Extensão de arquivo não permitida.", 400
+        return jsonify({"erro": "Extensão de arquivo não permitida."}), 400
     
 @app.route("/", methods=["GET", "POST"])
 def login():
