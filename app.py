@@ -154,7 +154,7 @@ class RegistroAcesso(db.Model):
     largura_tela = db.Column(db.String(20))
     altura_tela = db.Column(db.String(20))
     tempo_segundos = db.Column(db.Integer)
-    data_hora = db.Column(db.DateTime, default=datetime.utcnow)
+    data_hora = db.Column(db.DateTime, default=horario_brasilia)
 
 # Tabela de registros (IP e User-Agent)
 class Registro(db.Model):
