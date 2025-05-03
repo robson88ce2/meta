@@ -15,7 +15,8 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from uuid import uuid4
 from PIL import Image
-
+import pytz
+from datetime import datetime
 
 # 🔥 Inicializa o Flask
 app = Flask(__name__, instance_relative_config=True)
@@ -104,6 +105,10 @@ def login_requerido(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
+def horario_brasilia():
+    fuso_brasilia = pytz.timezone('America/Sao_Paulo')
+    return datetime.now(fuso_brasilia)
 @app.route("/gerenciar")
 @login_requerido
 def gerenciar():
@@ -113,7 +118,7 @@ class IPInicial(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     slug = db.Column(db.String(255), db.ForeignKey('link.slug'))  # adicione isso
     ip = db.Column(db.String(50))
-    data_hora = db.Column(db.DateTime, default=datetime.utcnow)
+    data_hora = db.Column(db.DateTime, default=horario_brasilia)
     
 # Tabela de links
 class Link(db.Model):
