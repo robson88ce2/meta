@@ -59,20 +59,19 @@ def upload_imagem():
         caminho = os.path.join(app.config["UPLOAD_FOLDER"], filename)
 
         try:
-            # Abre e valida imagem
+            filename = secure_filename(arquivo.filename)
+            basename = os.path.splitext(filename)[0]  # pega o nome sem extensão
+            filename_jpg = basename + ".jpg"  # cria o novo nome .jpg
+            caminho_jpg = os.path.join(app.config["UPLOAD_FOLDER"], filename_jpg)
+
             img = Image.open(arquivo)
-            img = img.convert("RGB")  # Garante que seja RGB
-
-            # Redimensiona para 1200x630 (padrão social media)
+            img = img.convert("RGB")
             img = img.resize((1200, 630))
-
-            # Salva como JPEG
-            caminho_jpg = os.path.splitext(caminho)[0] + ".jpg"
             img.save(caminho_jpg, "JPEG", quality=85)
 
-            # Retorna a URL pública da imagem
-            url_imagem = url_for('static', filename=f'previews/{filename}', _external=True)
+            url_imagem = url_for('static', filename=f'previews/{filename_jpg}', _external=True)
             return jsonify({"url": url_imagem}), 200
+
 
         except Exception as e:
             return jsonify({"erro": f"Erro ao processar imagem: {e}"}), 500
@@ -200,7 +199,12 @@ def criar_link():
                 filename = secure_filename(imagem.filename)
                 caminho = os.path.join(UPLOAD_FOLDER, filename)
                 imagem.save(caminho)
-                preview_imagem = filename  # Só o nome do arquivo, para usar depois com url_for
+                
+                # Construa a URL da imagem
+                preview_imagem = url_for('static', filename=f'previews/{filename}', _external=True)
+            else:
+                flash("Arquivo de imagem inválido!", "error")
+                return redirect('/criar_link')
 
         # Validação
         if not destino:
