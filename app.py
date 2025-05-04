@@ -1,22 +1,22 @@
-import uuid
-from flask import Flask, request, render_template, jsonify, redirect, url_for, flash
-from flask_sqlalchemy import SQLAlchemy
-import random
-import string
-from flask import Flask, request, render_template, jsonify, redirect, url_for, session
-from functools import wraps
-from flask_migrate import Migrate
 import os
 import re
-from werkzeug.utils import secure_filename
-from flask import request, render_template, redirect
+import uuid
+import random
+import string
+import pytz
 import requests
+from PIL import Image
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
+from functools import wraps
 from uuid import uuid4
-from PIL import Image
-import pytz
-from datetime import datetime
+from flask import (
+    Flask, request, render_template, jsonify, redirect,
+    url_for, flash, session
+)
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from werkzeug.utils import secure_filename
 
 # 🔥 Inicializa o Flask
 app = Flask(__name__, instance_relative_config=True)
@@ -85,7 +85,7 @@ def login():
     if request.method == "POST":
         usuario = request.form["usuario"]
         senha = request.form["senha"]
-        if usuario == "policia" and senha == "Itapipoca2025civil#":
+        if usuario == "policia" and senha == "Itapipoca2025#":
             session["logado"] = True
             return redirect(url_for("gerenciar"))
         else:
