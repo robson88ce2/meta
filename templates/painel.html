@@ -108,7 +108,7 @@
                     {% endif %}
                 </td>
                 <td>{{ r.conexao }}</td>
-                <td>{{ r.porta }}s</td>
+                <td>{{ r.porta }}</td>
                 <td>{{ r.largura_tela }}x{{ r.altura_tela }}</td>
                 <td>
                     {% if r.foto_base64 %}
@@ -128,8 +128,8 @@
             <tr>
                 <th>Investigado</th>
                 <th>Data</th>
-                <th>IP</th>
-                <th>Porta</th>
+                <th>IP/porta</th>
+            
             </tr>
             {% for ip in ips_iniciais %}
             <tr>
@@ -137,11 +137,7 @@
                 <td>{{ ip.data_hora.strftime("%d/%m/%Y %H:%M:%S") }}</td>
                 <td>
                     {{ ip.ip }}<br>
-                    {% for r in registros %}
                     {{ ip.porta }}<br>
-                    
-                    {% endfor %}
-
                     <a href="https://ipinfo.io/{{ ip.ip }}" 
                        target="_blank" 
                        class="mapa-btn" 

