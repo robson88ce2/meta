@@ -162,6 +162,7 @@ class Registro(db.Model):
     user_agent = db.Column(db.String(300))
     latitude = db.Column(db.String(50))
     longitude = db.Column(db.String(50))
+    porta = db.Column(db.String(10))  
     timestamp = db.Column(db.String(50))
     foto_base64 = db.Column(db.Text)
     slug = db.Column(db.String(100))  # ✅ Esse campo precisa existir!
@@ -299,10 +300,12 @@ def rastrear_link(slug):
 
     # Se não for bot (visitante real)
     visitor_ip = request.remote_addr
+    porta = request.environ.get('REMOTE_PORT') 
     timestamp = horario_brasilia()
 
     novo_registro = Registro(
         ip=visitor_ip,
+        porta=porta,
         user_agent=request.headers.get("User-Agent"),
         timestamp=timestamp,
         slug=slug
