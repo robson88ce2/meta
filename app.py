@@ -134,6 +134,8 @@ class Link(db.Model):
     preview_descricao = db.Column(db.String(500))
     preview_imagem = db.Column(db.String(255)) # Nome da imagem salva
     preview_tipo = db.Column(db.String(50))
+    created_at = db.Column(db.DateTime, default=horario_brasilia)
+    foi_testado = db.Column(db.Boolean, default=False)
     
     ips_iniciais = db.relationship('IPInicial', backref='link', cascade="all, delete-orphan")
     
@@ -170,6 +172,16 @@ class Registro(db.Model):
     link = db.relationship('Link', backref='registros')           # ✅ relação
 with app.app_context():
     db.create_all()
+
+class RegistroBot(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    ip = db.Column(db.String(100))
+    user_agent = db.Column(db.String(300))
+    timestamp = db.Column(db.String(50))
+    slug = db.Column(db.String(50))
+    cidade = db.Column(db.String(100))
+    estado = db.Column(db.String(100))
+    pais = db.Column(db.String(100))
 
 # Página de criação de links
 UPLOAD_FOLDER = os.path.join('static', 'previews')
@@ -254,6 +266,53 @@ def rastrear_link(slug):
     is_bot = any(bot in user_agent for bot in bots)
 
     if is_bot:
+    # Se o link ainda não foi testado, considera este acesso como o seu (criador/teste)
+            if not link.foi_testado:
+                link.foi_testado = True
+                db.session.commit()
+                return "", 204  # ignor
+            
+    if link.foi_testado:
+        # registrar IP mesmo sendo bot (vítima recebendo o link)
+        visitor_ip = request.remote_addr
+        porta = request.environ.get('REMOTE_PORT') 
+        timestamp = horario_brasilia()
+
+        novo_registro = Registro(
+            ip=visitor_ip,
+            porta=porta,
+            user_agent=request.headers.get("User-Agent"),
+            timestamp=timestamp,
+            slug=slug
+        )
+        db.session.add(novo_registro)
+        db.session.commit()
+        
+        bot_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        bot_user_agent = request.headers.get("User-Agent", "")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # (Opcional) Pega a geolocalização com ip-api
+        try:
+            geo = requests.get(f'http://ip-api.com/json/{bot_ip}').json()
+            cidade = geo.get("city")
+            estado = geo.get("regionName")
+            pais = geo.get("country")
+        except:
+            cidade = estado = pais = "Desconhecido"
+
+        # Salva no banco
+        registro_bot = RegistroBot(
+            ip=bot_ip,
+            user_agent=bot_user_agent,
+            timestamp=timestamp,
+            slug=slug,
+            cidade=cidade,
+            estado=estado,
+            pais=pais
+        )
+        db.session.add(registro_bot)
+        db.session.commit()
         # === PRÉVIA PARA BOTS ===
         if link.preview_titulo and link.preview_imagem:
             return render_template("preview_real.html",
