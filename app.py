@@ -263,12 +263,7 @@ def rastrear_link(slug):
     user_agent = request.headers.get("User-Agent", "").lower()
 
     if is_bot(user_agent):
-        # Ignora primeiro acesso (teste do criador)
-        if not link.foi_testado:
-            link.foi_testado = True
-            db.session.commit()
-            return "", 204
-
+       
         registrar_acesso_bot(link)
 
         # PREVIEW PERSONALIZADO
