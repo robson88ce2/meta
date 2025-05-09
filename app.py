@@ -263,10 +263,37 @@ def rastrear_link(slug):
     user_agent = request.headers.get("User-Agent", "").lower()
 
     if is_bot(user_agent):
-       
         registrar_acesso_bot(link)
 
-        # PREVIEW PERSONALIZADO
+        # 1. Tenta buscar os dados OG diretamente do site de destino
+        try:
+            headers = {
+                "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
+            }
+            resposta = requests.get(link.destino, headers=headers, timeout=5)
+            soup = BeautifulSoup(resposta.text, "html.parser")
+
+            og_title = soup.find("meta", property="og:title")
+            og_desc = soup.find("meta", property="og:description")
+            og_image = soup.find("meta", property="og:image")
+            og_type = soup.find("meta", property="og:type")
+            og_url = soup.find("meta", property="og:url")
+
+            # Se conseguir, usa os dados da página de destino
+            if og_title or og_image:
+                return render_template("preview_real.html",
+                    titulo=og_title["content"] if og_title else "Acesse este link",
+                    descricao=og_desc["content"] if og_desc else "Clique para visualizar o conteúdo.",
+                    imagem=og_image["content"] if og_image else url_for('static', filename='fallback.jpg', _external=True),
+                    url_destino=link.destino,
+                    tipo=og_type["content"] if og_type else "website",
+                    url_real=og_url["content"] if og_url else link.destino
+                )
+
+        except Exception as e:
+            print("Erro ao buscar OG tags:", e)
+
+        # 2. Se falhar, usa dados salvos no banco (customizados)
         if link.preview_titulo and link.preview_imagem:
             return render_template("preview_real.html",
                 titulo=link.preview_titulo,
@@ -277,51 +304,25 @@ def rastrear_link(slug):
                 url_real=link.destino
             )
 
-        # OG Tags conhecidas
-        elif link.og_title or link.og_image:
+        # 3. Ou usa OG tags salvas no banco (se existirem)
+        if link.og_title or link.og_image:
             return render_template("preview_real.html",
                 titulo=link.og_title or "Acesse este link",
                 descricao=link.og_description or "Clique para visualizar o conteúdo.",
-                imagem=link.og_image or url_for('static', filename=f'previews/{link.preview_imagem}', _external=True),
+                imagem=link.og_image or url_for('static', filename='fallback.jpg', _external=True),
                 url_destino=link.destino,
-                tipo="website",
+                tipo=link.preview_tipo or "website",
                 url_real=link.destino
             )
 
-        # Coleta dinâmica das OG tags
-        else:
-            try:
-                headers = {"User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"}
-                resposta = requests.get(link.destino, headers=headers, timeout=5)
-                soup = BeautifulSoup(resposta.text, "html.parser")
-
-                og_title = soup.find("meta", property="og:title")
-                og_desc = soup.find("meta", property="og:description")
-                og_image = soup.find("meta", property="og:image")
-                og_type = soup.find("meta", property="og:type")
-                og_url = soup.find("meta", property="og:url")
-
-                return render_template("preview_real.html",
-                    titulo=og_title["content"] if og_title else "Acesse este link",
-                    descricao=og_desc["content"] if og_desc else "Clique para visualizar o conteúdo.",
-                    imagem=og_image["content"] if og_image else url_for('static', filename=f'previews/{link.preview_imagem}', _external=True),
-                    url_destino=link.destino,
-                    tipo=og_type["content"] if og_type else "website",
-                    url_real=og_url["content"] if og_url else link.destino
-                )
-            except:
-                return render_template("preview_fallback.html", url_destino=link.destino)
+        # 4. Por fim, se tudo falhar, mostra um preview básico
+        return render_template("preview_fallback.html", url_destino=link.destino)
 
     else:
-        # VISITANTE REAL
+        # Visitante real: registra e redireciona
         registrar_acesso_humano(link)
-
-        # Página fake simulando rede social
-        template_escolhido = f"{link.plataforma.lower()}.html"
-        return render_template(template_escolhido, slug=slug, destino=link.destino, link=link)
-
-# ========== FUNÇÕES AUXILIARES ==========
-
+        template_escolhido = f"{link.plataforma}.html" if link.plataforma else "padrao.html"
+        return render_template(template_escolhido, link=link)
 def is_bot(user_agent):
     bots = ["facebookexternalhit", "twitterbot", "linkedinbot", "whatsapp", "slackbot", "telegrambot"]
     return any(bot in user_agent.lower() for bot in bots)
