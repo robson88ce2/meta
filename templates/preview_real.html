@@ -18,13 +18,16 @@
     <!-- Canonical URL -->
     <link rel="canonical" href="{{ url_real }}">
 
-    <!-- Redirecionamento -->
-    <meta http-equiv="refresh" content="5;url={{ url_destino }}">
-
     <!-- Favicon (opcional) -->
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
 </head>
 <body>
-    <p>Redirecionando para o site... Se não for redirecionado em 5 segundos, <a href="{{ url_destino }}">clique aqui</a>.</p>
+    <p>Redirecionando para o site... Se não for redirecionado, <a href="{{ url_destino }}">clique aqui</a>.</p>
+
+    <script>
+        setTimeout(function () {
+            window.location.href = "{{ url_destino }}";
+        }, 3000);  // redireciona após 3 segundos
+    </script>
 </body>
 </html>
