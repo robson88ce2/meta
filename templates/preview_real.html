@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ titulo }}</title>
+
+    <!-- SEO / Social -->
+    <meta property="og:title" content="{{ titulo }}">
+    <meta property="og:description" content="{{ descricao }}">
+    <meta property="og:image" content="{{ imagem }}">
+    <meta property="og:type" content="{{ tipo }}">
+    <meta property="og:url" content="{{ url_real }}">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <!-- Responsividade -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="{{ url_real }}">
+
+    <!-- Favicon (opcional) -->
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+</head>
+<body>
+    <p>Redirecionando para o site... Se não for redirecionado, <a href="{{ url_destino }}">clique aqui</a>.</p>
+
+    <script>
+        setTimeout(function () {
+            window.location.href = "{{ url_destino }}";
+        }, 3000);  // redireciona após 3 segundos
+    </script>
+</body>
+</html>

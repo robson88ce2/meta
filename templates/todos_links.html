@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Links Criados</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap 5 e Ícones -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+
+    <style>
+        body {
+            background-color: #f1f3f5;
+        }
+
+        .card {
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .copiado-msg {
+            font-size: 0.8em;
+            color: green;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <h2 class="text-center mb-4"><i class="bi bi-link-45deg"></i> Links Criados</h2>
+        
+        <div class="text-end mb-3">
+            <a href="{{ url_for('gerenciar') }}" class="btn btn-dark">
+                <i class="bi bi-arrow-left"></i> Voltar
+            </a>
+        </div>
+
+        {% if links %}
+        <div class="card p-4">
+            <div class="table-responsive">
+                <table class="table table-striped align-middle text-center">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Investigado</th>
+                            <th>Slug</th>
+                            <th>Link</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for link in links %}
+                        <tr>
+                            <td>{{ link.nome_investigado }}</td>
+                            <td>{{ link.slug }}</td>
+                            <td>
+                                <span id="link-{{ loop.index }}">
+                                    {{ url_for('rastrear_link', slug=link.slug, _external=True) }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex justify-content-center gap-2">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="copiarLink({{ loop.index }})">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                    <form action="{{ url_for('excluir_link', link_id=link.id) }}" method="post" onsubmit="return confirm('Tem certeza?')">
+                                        <button type="submit">Excluir</button>
+                                    </form>                                    
+                                </div>
+                                <div id="msg-{{ loop.index }}" class="copiado-msg">✔ Copiado</div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-warning text-center">
+            Nenhum link criado até o momento.
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function copiarLink(index) {
+            const texto = document.getElementById("link-" + index).textContent;
+            navigator.clipboard.writeText(texto).then(function () {
+                const msg = document.getElementById("msg-" + index);
+                msg.style.display = "block";
+                setTimeout(() => msg.style.display = "none", 2000);
+            });
+        }
+    </script>
+</body>
+</html>

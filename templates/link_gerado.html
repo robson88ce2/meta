@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Link Gerado com Sucesso</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap 5 CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Ícones Bootstrap -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .card {
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .link-container {
+            word-break: break-all;
+        }
+
+        .copiado {
+            display: none;
+            color: green;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card p-4 text-center">
+                    <h3 class="text-success mb-3">
+                        <i class="bi bi-check-circle-fill"></i> Link Gerado com Sucesso!
+                    </h3>
+                    <p class="mb-4">Este é o link que você deve enviar para o alvo:</p>
+
+                    <div class="alert alert-light border link-container d-flex justify-content-between align-items-center">
+                        <span id="linkTexto">{{ link }}</span>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="copiarLink()">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                    <div id="copiadoMsg" class="copiado">✔ Link copiado!</div>
+
+                    <a href="{{ url_for('gerenciar') }}" class="btn btn-dark mt-3">
+                        <i class="bi bi-arrow-left-circle"></i> Voltar para Gerenciamento
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function copiarLink() {
+            const texto = document.getElementById("linkTexto").textContent;
+            navigator.clipboard.writeText(texto).then(function () {
+                const msg = document.getElementById("copiadoMsg");
+                msg.style.display = "block";
+                setTimeout(() => msg.style.display = "none", 2000);
+            });
+        }
+    </script>
+</body>
+</html>

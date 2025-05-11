@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Criar Link</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 60px 20px;
+        }
+        h1 {
+            margin-bottom: 30px;
+        }
+        form {
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+        }
+        input[type="text"], input[type="url"], select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0 20px 0;
+            border: none;
+            border-radius: 5px;
+            background-color: #f5f6fa;
+            color: #2d3436;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            background-color: #00b894;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #019875;
+        }
+        .voltar {
+            display: block;
+            margin-top: 20px;
+            text-align: center;
+            color: #74b9ff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .voltar:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔗 Criar Link Mascarado</h1>
+
+    <form method="POST" enctype="multipart/form-data" id="form-link">
+        
+        <input type="text" name="nome_investigado" placeholder="Nome do investigado" required>
+        <input type="text" name="slug" placeholder="Slug personalizado (opcional)">
+        <input type="url" name="destino" placeholder="Destino final (ex: https://g1.globo.com)" required>
+        
+        <label for="plataforma">Plataforma Visual:</label>
+        <select name="plataforma" id="plataforma" required>
+            <option value="youtube">YouTube</option>
+            <option value="instagram">Instagram</option>
+            <option value="facebook">Facebook</option>
+            <option value="kwai">Kwai</option>
+            <option value="tiktok">TikTok</option>
+            <option value="noticia">Portal de Notícias</option>
+        </select>
+
+        <hr>
+
+        <h3>Pré-visualização Alternativa (Personalizada)</h3>
+        <input type="text" name="preview_titulo" placeholder="Título alternativo (opcional)">
+        <input type="text" name="preview_descricao" placeholder="Descrição alternativa (opcional)">
+
+        <!-- Upload da imagem para a visualização falsa -->
+        <input type="file" id="imagem_preview" accept="image/*">
+        <input type="text" name="preview_imagem" id="preview_imagem" placeholder="URL da imagem alternativa" readonly required>
+
+        <button type="submit">Gerar Link</button>
+    </form>
+
+    <p id="status_upload" style="color: #74b9ff; margin-top: 10px;"></p>
+
+    <a href="/gerenciar" class="voltar">⬅ Voltar ao Gerenciamento</a>
+
+    <script>
+    // Upload da imagem de preview alternativo
+    document.getElementById('imagem_preview').addEventListener('change', async function () {
+        const fileInput = this;
+        const status = document.getElementById('status_upload');
+        const inputPreviewImagem = document.getElementById('preview_imagem');
+
+        if (fileInput.files.length === 0) return;
+
+        const formData = new FormData();
+        formData.append("imagem", fileInput.files[0]);
+
+        status.innerText = "Enviando imagem alternativa...";
+
+        try {
+            const res = await fetch("/upload_imagem", {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await res.json();
+            if (data.url) {
+                inputPreviewImagem.value = data.url;
+                status.innerText = "Imagem alternativa enviada com sucesso!";
+            } else {
+                status.innerText = data.erro || "Erro ao enviar imagem alternativa.";
+            }
+        } catch (err) {
+            status.innerText = "Erro na conexão com o servidor.";
+        }
+    });
+    </script>
+</body>
+</html>

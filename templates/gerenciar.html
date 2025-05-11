@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel de Gerenciamento</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+            color: #fff;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 80px auto;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        li {
+            margin: 20px 0;
+        }
+
+        a {
+            display: block;
+            background-color: #00b894;
+            color: white;
+            padding: 14px;
+            border-radius: 8px;
+            text-decoration: none;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        a:hover {
+            background-color: #019875;
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Painel de Gerenciamento</h2>
+        <ul>
+            <li><a href="/painel" aria-label="Ver Painel de Estatísticas">📊 Ver Painel</a></li>
+            <li><a href="/criar_link" aria-label="Criar novo link falso">🔗 Criar Link</a></li>
+            <li><a href="/todos_links" aria-label="Visualizar todos os links criados">🧾 Links Criados</a></li>
+            <li><a href="/logout" aria-label="Sair do sistema">🚪 Sair</a></li>
+        </ul>
+    </div>
+</body>
+</html>

