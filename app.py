@@ -265,23 +265,12 @@ def gerar_slug(tamanho=8):
 @app.route("/r/<slug>")
 def rastrear_link(slug):
     link = Link.query.filter_by(slug=slug).first_or_404()
+
     user_agent = request.headers.get("User-Agent", "").lower()
+    bots = ["facebookexternalhit", "twitterbot", "linkedinbot", "whatsapp", "slackbot", "telegrambot"]
+    is_bot = any(bot in user_agent for bot in bots)
 
-    if is_bot(user_agent):
-        registrar_acesso_bot(link)
-
-        # 1. Se houver preview personalizado salvo no banco, usa ele
-        if link.preview_titulo and link.preview_imagem:
-            return render_template("preview_real.html",
-                titulo=link.preview_titulo,
-                descricao=link.preview_descricao or "Clique para visualizar o conteúdo.",
-                imagem=url_for('static', filename=f'previews/{link.preview_imagem}', _external=True),
-                url_destino=link.destino,
-                tipo=link.preview_tipo or "website",
-                url_real=link.destino
-            )
-
-        # 2. Tenta buscar os dados OG diretamente do site de destino
+    if is_bot:
         try:
             headers = {
                 "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
@@ -292,91 +281,35 @@ def rastrear_link(slug):
             og_title = soup.find("meta", property="og:title")
             og_desc = soup.find("meta", property="og:description")
             og_image = soup.find("meta", property="og:image")
-            og_type = soup.find("meta", property="og:type")
-            og_url = soup.find("meta", property="og:url")
 
-            if og_title or og_image:
-                return render_template("preview_real.html",
-                    titulo=og_title["content"] if og_title else "Acesse este link",
-                    descricao=og_desc["content"] if og_desc else "Clique para visualizar o conteúdo.",
-                    imagem=og_image["content"] if og_image else url_for('static', filename='fallback.jpg', _external=True),
-                    url_destino=link.destino,
-                    tipo=og_type["content"] if og_type else "website",
-                    url_real=og_url["content"] if og_url else link.destino
-                )
-
-        except Exception as e:
-            print("Erro ao buscar OG tags:", e)
-
-        # 3. Se falhar, tenta usar dados OG salvos no banco
-        if link.og_title or link.og_image:
             return render_template("preview_real.html",
-                titulo=link.og_title or "Acesse este link",
-                descricao=link.og_description or "Clique para visualizar o conteúdo.",
-                imagem=link.og_image or url_for('static', filename='fallback.jpg', _external=True),
-                url_destino=link.destino,
-                tipo=link.preview_tipo or "website",
-                url_real=link.destino
+                titulo=og_title["content"] if og_title else "Acesse este link",
+                descricao=og_desc["content"] if og_desc else "Clique para visualizar o conteúdo.",
+                imagem=og_image["content"] if og_image else url_for('static', filename='fallback.jpg', _external=True),
+                url_destino=link.destino
             )
+        except:
+            return render_template("preview_fallback.html", url_destino=link.destino)
 
-        # 4. Fallback: preview simples
-        return render_template("preview_fallback.html", url_destino=link.destino)
+    # Visitante real: coleta os dados
+    visitor_ip = request.remote_addr
+    timestamp = horario_brasilia()
+    
+    novo = Registro(
+        ip=visitor_ip,
+        user_agent=request.headers.get("User-Agent"),
+        timestamp=timestamp,
+        slug=slug
+    )
+    db.session.add(novo)
+    db.session.commit()
 
-    else:
-        registrar_acesso_humano(link)
-        template_escolhido = f"{link.plataforma}.html" if link.plataforma else "padrao.html"
-        return render_template(template_escolhido, link=link, slug=link.slug, destino=link.destino)
-
-def is_bot(user_agent):
-    bots = ["facebookexternalhit", "twitterbot", "linkedinbot", "whatsapp", "slackbot", "telegrambot"]
-    return any(bot in user_agent.lower() for bot in bots)
+    template_escolhido = f"{link.plataforma.lower()}.html"
+    return render_template(template_escolhido, slug=slug, destino=link.destino, link=link)
 
 def horario_brasilia():
-    from pytz import timezone
-    from datetime import datetime
-    fuso = timezone("America/Fortaleza")
-    return datetime.now(fuso)
-
-def registrar_acesso_bot(link):
-    ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-    user_agent = request.headers.get("User-Agent", "")
-    timestamp = horario_brasilia()
-
-    try:
-        geo = requests.get(f'http://ip-api.com/json/{ip}', timeout=3).json()
-        cidade = geo.get("city", "Desconhecido")
-        estado = geo.get("regionName", "Desconhecido")
-        pais = geo.get("country", "Desconhecido")
-    except:
-        cidade = estado = pais = "Desconhecido"
-
-    registro_bot = RegistroBot(
-        ip=ip,
-        user_agent=user_agent,
-        timestamp=timestamp,
-        slug=link.slug,
-        cidade=cidade,
-        estado=estado,
-        pais=pais
-    )
-    db.session.add(registro_bot)
-    db.session.commit()
-
-def registrar_acesso_humano(link):
-    ip = request.remote_addr
-    porta = request.environ.get('REMOTE_PORT')
-    user_agent = request.headers.get("User-Agent")
-    timestamp = horario_brasilia()
-
-    novo_registro = Registro(
-        ip=ip,
-        porta=porta,
-        user_agent=user_agent,
-        timestamp=timestamp,
-        slug=link.slug
-    )
-    db.session.add(novo_registro)
-    db.session.commit()
+    # Oregon = UTC-7 | Brasília = UTC-3 => diferença = +4 horas
+    return (datetime.now() + timedelta(hours=4)).strftime("%d/%m/%Y %H:%M:%S")
 
 
 @app.route("/redir/<slug>")
