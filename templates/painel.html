@@ -6,8 +6,8 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: linear-gradient(to right, #141e30, #243b55);
-            color: #fff;
+            background: linear-gradient(to right, #141e30, #050506);
+            color: #fffafa;
             padding: 40px;
         }
 
@@ -56,7 +56,7 @@
             display: inline-block;
             margin-top: 20px;
             padding: 10px 20px;
-            background-color: #00b894;
+            background-color: #02f7c6;
             color: #fff;
             text-decoration: none;
             border-radius: 6px;
@@ -160,32 +160,7 @@
             {% endfor %}
         </table>
     </div>
-    <h2>🤖 IP Capturado de Bot (Acesso Automático)</h2>
-        <div class="table-container">
-            <table>
-                <tr>
-                    <th>Investigado</th>
-                    <th>Data</th>
-                    <th>IP/Porta</th>
-                </tr>
-                {% for bot in registros_bot %}
-                <tr>
-                    <td>{{ links[bot.slug] if bot.slug in links else '---' }}</td>
-                    <td>{{ bot.timestamp.strftime("%d/%m/%Y %H:%M:%S") }}</td>
-                    <td>
-                        {{ bot.ip }}<br>
-                        {{ bot.porta }}<br>
-                        <a href="https://ipinfo.io/{{ bot.ip }}" 
-                        target="_blank" 
-                        class="mapa-btn" 
-                        style="margin-top: 5px; display: inline-block;">
-                        🔍 Ver Provedor
-                        </a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </table>
-        </div>
+    
 
     <div style="text-align:center; margin-top: 20px;">
         <a href="/gerenciar" class="voltar">⬅ Voltar ao Gerenciamento</a>
