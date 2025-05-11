@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Acessar Conteúdo</title>
+</head>
+<body>
+    <h2>Você está sendo redirecionado...</h2>
+    <p>Clique no botão abaixo se o redirecionamento não acontecer automaticamente.</p>
+    <a href="{{ destino }}"><button>Acessar</button></a>
+
+    <script>
+        setTimeout(function() {
+            window.location.href = "{{ destino }}";
+        }, 3000);
+    </script>
+</body>
+</html>

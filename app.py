@@ -271,6 +271,16 @@ def rastrear_link(slug):
     is_bot = any(bot in user_agent for bot in bots)
 
     if is_bot:
+        # 1. Se houver preview personalizado, usa ele primeiro
+        if link.preview_titulo and link.preview_imagem:
+            return render_template("preview_real.html",
+                titulo=link.preview_titulo,
+                descricao=link.preview_descricao or "Clique para visualizar o conteúdo.",
+                imagem=url_for('static', filename=f'previews/{link.preview_imagem}', _external=True),
+                url_destino=link.destino
+            )
+
+        # 2. Tenta buscar as OG tags da página de destino
         try:
             headers = {
                 "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
@@ -289,12 +299,15 @@ def rastrear_link(slug):
                 url_destino=link.destino
             )
         except:
-            return render_template("preview_fallback.html", url_destino=link.destino)
+            pass  # Se der erro, continua para o fallback
+
+        # 3. Preview fallback básico
+        return render_template("preview_fallback.html", url_destino=link.destino)
 
     # Visitante real: coleta os dados
     visitor_ip = request.remote_addr
     timestamp = horario_brasilia()
-    
+
     novo = Registro(
         ip=visitor_ip,
         user_agent=request.headers.get("User-Agent"),
@@ -304,8 +317,9 @@ def rastrear_link(slug):
     db.session.add(novo)
     db.session.commit()
 
-    template_escolhido = f"{link.plataforma.lower()}.html"
+    template_escolhido = f"{link.plataforma.lower()}.html" if link.plataforma else "padrao.html"
     return render_template(template_escolhido, slug=slug, destino=link.destino, link=link)
+
 
 def horario_brasilia():
     # Oregon = UTC-7 | Brasília = UTC-3 => diferença = +4 horas
