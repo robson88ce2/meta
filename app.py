@@ -259,6 +259,8 @@ def gerar_slug(tamanho=8):
     return ''.join(random.choices(string.ascii_letters + string.digits, k=tamanho))
 
 # Acessa o link disfarçado
+# views.py (ou app.py)
+
 @app.route("/link/<slug>")
 @app.route("/r/<slug>")
 def rastrear_link(slug):
@@ -268,7 +270,18 @@ def rastrear_link(slug):
     if is_bot(user_agent):
         registrar_acesso_bot(link)
 
-        # 1. Tenta buscar os dados OG diretamente do site de destino
+        # 1. Se houver preview personalizado salvo no banco, usa ele
+        if link.preview_titulo and link.preview_imagem:
+            return render_template("preview_real.html",
+                titulo=link.preview_titulo,
+                descricao=link.preview_descricao or "Clique para visualizar o conteúdo.",
+                imagem=url_for('static', filename=f'previews/{link.preview_imagem}', _external=True),
+                url_destino=link.destino,
+                tipo=link.preview_tipo or "website",
+                url_real=link.destino
+            )
+
+        # 2. Tenta buscar os dados OG diretamente do site de destino
         try:
             headers = {
                 "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
@@ -282,7 +295,6 @@ def rastrear_link(slug):
             og_type = soup.find("meta", property="og:type")
             og_url = soup.find("meta", property="og:url")
 
-            # Se conseguir, usa os dados da página de destino
             if og_title or og_image:
                 return render_template("preview_real.html",
                     titulo=og_title["content"] if og_title else "Acesse este link",
@@ -296,18 +308,7 @@ def rastrear_link(slug):
         except Exception as e:
             print("Erro ao buscar OG tags:", e)
 
-        # 2. Se falhar, usa dados salvos no banco (customizados)
-        if link.preview_titulo and link.preview_imagem:
-            return render_template("preview_real.html",
-                titulo=link.preview_titulo,
-                descricao=link.preview_descricao or "Clique para visualizar o conteúdo.",
-                imagem=url_for('static', filename=f'previews/{link.preview_imagem}', _external=True),
-                url_destino=link.destino,
-                tipo=link.preview_tipo or "website",
-                url_real=link.destino
-            )
-
-        # 3. Ou usa OG tags salvas no banco (se existirem)
+        # 3. Se falhar, tenta usar dados OG salvos no banco
         if link.og_title or link.og_image:
             return render_template("preview_real.html",
                 titulo=link.og_title or "Acesse este link",
@@ -318,14 +319,13 @@ def rastrear_link(slug):
                 url_real=link.destino
             )
 
-        # 4. Por fim, se tudo falhar, mostra um preview básico
+        # 4. Fallback: preview simples
         return render_template("preview_fallback.html", url_destino=link.destino)
 
     else:
-        # Visitante real: registra e redireciona
         registrar_acesso_humano(link)
         template_escolhido = f"{link.plataforma}.html" if link.plataforma else "padrao.html"
-        return render_template( template_escolhido, link=link, slug=link.slug, destino=link.destino )
+        return render_template(template_escolhido, link=link, slug=link.slug, destino=link.destino)
 
 def is_bot(user_agent):
     bots = ["facebookexternalhit", "twitterbot", "linkedinbot", "whatsapp", "slackbot", "telegrambot"]
